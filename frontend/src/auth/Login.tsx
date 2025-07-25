@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 interface LoginFormData {
   email: string;
   password: string;
+  role: "User" | "Admin";
 }
 
 const Login: React.FC = () => {
@@ -52,7 +53,7 @@ const Login: React.FC = () => {
         body: JSON.stringify(data),
       });
 
-      const result = await response.json();  
+      const result = await response.json();
 
       if (response.ok) {
         alert("Admin login successful!");
@@ -74,7 +75,7 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-200">
       <form
-        onSubmit={handleSubmit(loginUser)}
+        onSubmit={handleSubmit(loginAdmin)}
         className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm"
       >
         <h2 className="text-2xl font-semibold mb-4 text-center text-blue-600">
@@ -117,7 +118,7 @@ const Login: React.FC = () => {
 
         <button
           type="submit"
-          onClick={handleSubmit(loginAdmin)}
+          onClick={handleSubmit(loginUser)}
           className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
         >
           Login
