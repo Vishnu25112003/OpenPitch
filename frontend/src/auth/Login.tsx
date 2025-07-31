@@ -1,81 +1,70 @@
 import React from "react";
 import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 
 interface LoginFormData {
   email: string;
   password: string;
-  role: "User" | "Admin";
 }
 
 const Login: React.FC = () => {
+  const navigate = useNavigate(); 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginFormData>();
 
-  const loginUser = async (data: LoginFormData) => {
-    try {
-      const response = await fetch("http://localhost:5000/api/login/login/user", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+const loginUser = async (data: LoginFormData) => {
+  try {
+    const response = await fetch("http://localhost:5000/api/login/login/user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
 
-      const result = await response.json();
+    const result = await response.json();
+    console.log("Login response:", result);
 
-      if (response.ok) {
-        alert("Login successful!");
-        console.log(result);
-      } else {
-        alert("Login failed: " + result.message);
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        alert("Error: " + error.message);
-        console.error(error.message);
-      } else {
-        console.error("Unknown error:", error);
-        alert("Unknown error occurred");
-      }
+    if (!response.ok) {
+      alert("Login failed: " + result.message);
+      return;
     }
-  };
+    const role = result.user?.role;
 
-  const loginAdmin = async (data: LoginFormData) => {
-    try {
-      const response = await fetch("http://localhost:5000/api/login/login/admin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+    localStorage.setItem("user", JSON.stringify(result.user));
+    localStorage.setItem("token", result.token); 
 
-      const result = await response.json();
-
-      if (response.ok) {
-        alert("Admin login successful!");
-        console.log(result);
-      } else {
-        alert("Admin login failed: " + result.message);
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        alert("Error: " + error.message);
-        console.error(error.message);
-      } else {
-        console.error("Unknown error:", error);
-        alert("Unknown error occurred");
-      }
+    if (role === "User") {
+      alert("User Login successful!");
+      navigate("/user");
+    } else if (role === "Admin") {
+      alert("Admin Login successful!");
+      navigate("/admin");
+    } else {
+      alert("Login failed: Role not found. Please Recheck ");
+      console.error("Unexpected role:", role);
     }
-  };
+
+  } catch (error) {
+    if (error instanceof Error) {
+      alert("Error: " + error.message);
+      console.error(error.message);
+    } else {
+      console.error("Unknown error:", error);
+      alert("Unknown error occurred");
+    }
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-200">
       <form
-        onSubmit={handleSubmit(loginAdmin)}
+        onSubmit={handleSubmit(loginUser)}
         className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm"
       >
         <h2 className="text-2xl font-semibold mb-4 text-center text-blue-600">
@@ -118,7 +107,6 @@ const Login: React.FC = () => {
 
         <button
           type="submit"
-          onClick={handleSubmit(loginUser)}
           className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
         >
           Login
