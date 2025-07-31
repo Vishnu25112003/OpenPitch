@@ -24,13 +24,6 @@ export const loginUser = async (req, res) => {
             { expiresIn: '1h' }
         );
 
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: false,         
-            sameSite: 'Lax',
-            maxAge: 3600000       
-        });
-
         const { _id, email: userEmail, role } = user;
 
         res.status(200).json({
@@ -39,7 +32,8 @@ export const loginUser = async (req, res) => {
                 id: _id,
                 email: userEmail,
                 role: role,
-            }
+            },
+            token: token
         });
 
     } catch (error) {

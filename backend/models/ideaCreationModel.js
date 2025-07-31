@@ -9,6 +9,10 @@ const ideaCreationSchema = new mongoose.Schema({
         type : String,
         required : true
     },
+    category : {
+        type : String,
+        required : true
+    },
     media : {
         imageUrl : {
             type : String

@@ -16,8 +16,8 @@ app.use(cors(
 app.use(express.json());
 
 import registrationData from "./routes/registrationRoutes.js";
-import loginData from "./routes/loginRoutes.js";  
-import ideaCreationData from "./routes/ideaCreationRoutes.js";  
+import loginData from "./routes/loginRoutes.js"; 
+import ideaCreationData from "./routes/ideaCreationRoutes.js"; 
 
 app.use("/api/registration", registrationData);
 app.use("/api/login", loginData);
