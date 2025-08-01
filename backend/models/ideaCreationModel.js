@@ -1,65 +1,36 @@
 import mongoose from "mongoose";
 
-const ideaCreationSchema = new mongoose.Schema({
-    title : {
-        type : String,
-        required : true
+const ideaPostSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
-    description : {
-        type : String,
-        required : true
+    title: {
+      type: String,
+      required: true,
     },
-    category : {
-        type : String,
-        required : true
+    description: {
+      type: String,
+      required: true,
     },
-    media : {
-        imageUrl : {
-            type : String
-        },
-        videoUrl : {
-            type : String
-        }           
+    category: {
+      type: String,
+      required: true,
     },
-    createdBy : {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : "User",
-        required : true
+    imageUrl: {
+      type: String,
     },
-    createdAt : {
-        type : Date,
-        default : Date.now()
+    videoUrl: {
+      type: String,
     },
-    updatedAt : {
-        type : Date,
-        default : Date.now()
-    },
-    reaction : {
-        like : {
-            type : Number,
-            default : 0
-        },
-        dislike : {
-            type : Number,
-            default : 0
-        }
-    },
-    comments : [{
-        userId: {
-            type : mongoose.Schema.Types.ObjectId,
-            ref : "User",
-            required : true
-        },
-        comment : {
-            type : String,
-            required : true
-        },
-        createdAt : {
-            type : Date,
-            default : Date.now()
-        },
-    }
-    ],
-});
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    dislikes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    comments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
+  },
+  { timestamps: true }
+);
 
-export default mongoose.model("IdeaCreation", ideaCreationSchema);
+const IdeaPost = mongoose.model("IdeaPost", ideaPostSchema);
+export default IdeaPost;

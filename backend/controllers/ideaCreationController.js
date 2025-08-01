@@ -1,33 +1,33 @@
-import IdeaCreation from "../models/ideaCreationModel.js";
+// backend/controllers/ideaCreationController.js
+
+import IdeaPost from "../models/ideaCreationModel.js";
 
 export const createIdea = async (req, res) => {
   try {
-    console.log("Incoming idea post request...");
-    console.log("User:", req.user);
-    console.log("Body:", req.body);
-    console.log("Files:", req.files);
+    console.log("User in request:", req.user); // ✅ check if req.user exists
 
-    const { title, description, category } = req.body;
-    const userId = req.user._id;
+    const userId = req.user?.userId;
 
-    const image = req.files?.image?.[0];
-    const video = req.files?.video?.[0];
+    if (!userId) {
+      return res.status(400).json({ message: "User ID not found in token" });
+    }
 
-    const newIdea = new IdeaCreation({
+    const { title, description, category, contentType } = req.body;
+
+    const newIdea = new IdeaPost({
+      userId, 
       title,
       description,
       category,
-      media: {
-        imageUrl: image?.filename,
-        videoUrl: video?.filename
-      },
-      createdBy: userId
+      contentType,
+      media: req.file?.filename || null, 
     });
 
-    const savedIdea = await newIdea.save();
-    res.status(201).json({ message: "Idea created successfully", savedIdea });
+    await newIdea.save();
+
+    res.status(201).json({ message: "Idea posted successfully", idea: newIdea });
   } catch (error) {
-    console.error("Idea post error:", error);
-    res.status(500).json({ message: "Failed to create idea" });
+    console.error("Idea post failed:", error);
+    res.status(500).json({ message: "Server error while posting your idea" });
   }
 };
