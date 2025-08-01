@@ -1,10 +1,9 @@
-// backend/controllers/ideaCreationController.js
 
 import IdeaPost from "../models/ideaCreationModel.js";
 
 export const createIdea = async (req, res) => {
   try {
-    console.log("User in request:", req.user); // ✅ check if req.user exists
+    console.log("User in request:", req.user); 
 
     const userId = req.user?.userId;
 
@@ -12,15 +11,14 @@ export const createIdea = async (req, res) => {
       return res.status(400).json({ message: "User ID not found in token" });
     }
 
-    const { title, description, category, contentType } = req.body;
+    const { title, description, category } = req.body;
 
     const newIdea = new IdeaPost({
       userId, 
       title,
       description,
       category,
-      contentType,
-      media: req.file?.filename || null, 
+      image: req.file ? req.file.filename : null, 
     });
 
     await newIdea.save();

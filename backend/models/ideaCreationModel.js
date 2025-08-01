@@ -19,10 +19,11 @@ const ideaPostSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    imageUrl: {
+    image: {
       type: String,
+      default:null,
     },
-    videoUrl: {
+    video: {
       type: String,
     },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
