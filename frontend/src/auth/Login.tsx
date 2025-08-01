@@ -39,7 +39,7 @@ const loginUser = async (data: LoginFormData) => {
     localStorage.setItem("token", result.token); 
 
     if (role === "User") {
-      alert("User Login successful!");
+      alert("User Login successful!");  
       navigate("/user");
     } else if (role === "Admin") {
       alert("Admin Login successful!");

@@ -21,14 +21,12 @@ const ideaPostSchema = new mongoose.Schema(
     },
     image: {
       type: String,
-      default:null,
+      default: null,
     },
-    video: {
-      type: String,
+    reviews: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
+      Comments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
     },
-    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    dislikes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    comments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
   },
   { timestamps: true }
 );

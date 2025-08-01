@@ -15,7 +15,7 @@ const App: React.FC = () => {
         <Route path="/signin" element={<Signin />} />
         <Route path="/user/*" element={<UserApp />} />
         <Route path="/admin/*" element={<AdminApp />} />
-        <Route path="*" element={<h1>404 - Not Found</h1>} />
+        <Route path="*" element={<h1>404 Not Found</h1>} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,7 +1,7 @@
-function Homepage() {
+const Homepage : React.FC = () => {
   return (
     <div>
-      <h1>Welcome to the Homepage</h1>
+      <h1>Homepage</h1>
     </div>
   )
 }
