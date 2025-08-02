@@ -29,3 +29,12 @@ export const createIdea = async (req, res) => {
     res.status(500).json({ message: "Server error while posting your idea" });
   }
 };
+
+export const getAllIdeas = async (req, res) => {
+  try {
+    const ideas = await IdeaPost.find();
+    res.status(200).json(ideas);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

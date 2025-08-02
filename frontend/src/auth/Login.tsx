@@ -7,7 +7,7 @@ interface LoginFormData {
   password: string;
 }
 
-const Login: React.FC = () => {
+  const Login: React.FC = () => {
   const navigate = useNavigate(); 
   const {
     register,

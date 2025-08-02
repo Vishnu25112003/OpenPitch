@@ -10,7 +10,7 @@ export default function auth(user){
         name: user.name,
         email: user.email,
     };
-    return jwt.sign(payload, token, { expiresIn: '24h' });
+    return jwt.sign(payload, token, { expiresIn: '1h' });
 }
 
 export const verifyToken = (req, res, next) => {
