@@ -40,10 +40,10 @@ const loginUser = async (data: LoginFormData) => {
 
     if (role === "User") {
       alert("User Login successful!");  
-      navigate("/user");
+      navigate("/homepage");
     } else if (role === "Admin") {
       alert("Admin Login successful!");
-      navigate("/admin");
+      navigate("/dashboard");
     } else {
       alert("Login failed: Role not found. Please Recheck ");
       console.error("Unexpected role:", role);

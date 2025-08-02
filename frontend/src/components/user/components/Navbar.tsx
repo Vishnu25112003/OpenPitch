@@ -10,7 +10,7 @@ const Navbar: React.FC = () => {
   return (
     <nav className="bg-white shadow-md px-30 py-4 flex justify-between items-center">
       <div className="text-6xl font-bold text-blue-600">
-        <Link to="/user">OpenPitch</Link>
+        <Link to="/homepage">OpenPitch</Link>
       </div>
       <button
         onClick={handleLogout}
