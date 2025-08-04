@@ -1,7 +1,6 @@
 
 import IdeaPost from "../models/ideaCreationModel.js";
 
-
 export const createIdea = async (req, res) => {
   try {
     console.log("User in request:", req.user); 

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 const handleLogout = () => {
   localStorage.removeItem("user");
   localStorage.removeItem("token");
-  window.location.href = "/";
+  window.location.href = "/login";
 };
 
 const Navbar: React.FC = () => {

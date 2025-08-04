@@ -8,6 +8,7 @@ import CreatePost from "./components/user/pages/CreatePost";
 import Dashboard from "./components/admin/pages/Dashboard";
 import Navbar from "./components/user/components/Navbar";
 import Verities from "./components/user/components/Verities";
+import CommentPage from "./components/user/pages/CommentPage";
 
 const App: React.FC = () => {
   return (
@@ -25,6 +26,7 @@ const App: React.FC = () => {
         <Route path="/homepage" element={<><Navbar /> <Homepage /><Verities/></>} />
         <Route path="/profile" element={<><Navbar /> <Profile /><Verities/></> } />
         <Route path="/create" element={ <><Navbar /> <CreatePost /><Verities/></> } />
+        <Route path="/comment" element={<><Navbar /> <CommentPage /><Verities/></>} />
       </Routes>
 
         {/* Admin */}

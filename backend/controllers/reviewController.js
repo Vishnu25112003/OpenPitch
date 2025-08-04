@@ -1,56 +1,54 @@
-import Review from "../models/reviewModel.js";
-
-export const likeIdea = async (req, res) => {
-  try {
-    const { postId } = req.body;
-    const userId = req.userId;
-
-    let review = await Review.findOne({ postId, userId });
-
-    if (review) {
-      review.like = true;
-    } else {
-      review = new Review({ postId, userId, like: true });
-    }
-
-    await review.save();
-    res.status(200).json({ message: "Liked successfully" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+import Comment from "../models/reviewModel.js";
 
 export const postComment = async (req, res) => {
   try {
-    const { postId, comment } = req.body;
-    const userId = req.userId;
+    const { comment } = req.body;
+    const ideaId = req.params;
+    const userId = req.user.userId;
 
-    const newReview = new Review({ postId, userId, comment });
-    await newReview.save();
+    const newComment = new Comment({
+      comment,
+      userId,
+      ideaId,
+    });
 
-    res.status(201).json({ message: "Comment posted" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const saved = await newComment.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Comment added successfully",
+      data: saved,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to add comment",
+      error: error.message,
+    });
   }
 };
 
-export const getIdeaReviewSummary = async (req, res) => {
+export const putLike = async (req, res) => {
   try {
-    const { postId } = req.params;
-
-    const reviews = await Review.find({ postId }).populate("userId", "name");
-
-    const likeCount = reviews.filter(r => r.like).length;
-    const comments = reviews
-      .filter(r => r.comment)
-      .map(r => ({
-        user: r.userId.name,
-        comment: r.comment,
-        time: r.createdAt,
-      }));
-
-    res.status(200).json({ likeCount, comments });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const review = await Comment.findById(req.params.id);
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Review not found",
+      });
+    }
+    review.like += 1;
+    await review.save();
+    res.status(200).json({
+      success: true,
+      message: "Like added successfully",
+      data: review,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to add like",
+      error: error.message,
+    });
   }
 };

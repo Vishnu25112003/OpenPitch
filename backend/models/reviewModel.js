@@ -2,14 +2,14 @@ import mongoose from 'mongoose';
 
 const reviewSchema = new mongoose.Schema(
   {
-    postId: {
+    ideaId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "IdeaPost",
       required: true,
     },
     like:{
-      type:Boolean,
-      default:false
+      type: Number,
+      default:0,
     },
     comment: {
       type: String,

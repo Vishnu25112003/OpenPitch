@@ -3,7 +3,7 @@ import {FaHome, FaPlus, FaUser} from 'react-icons/fa'
 
 const Verities : React.FC = () => {
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-white  shadow-md list-none flex justify-center items-center px-4 py-2 space-x-20">
+      <div className="fixed bottom-0 left-0 right-0 bg-white list-none shadow-md flex justify-center items-center px-4 py-2 space-x-20 z-50">
             <li>
                 <Link to="/homepage">
                     <FaHome className='text-4xl text-blue-600 ' />
