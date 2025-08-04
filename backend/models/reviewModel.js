@@ -2,10 +2,14 @@ import mongoose from 'mongoose';
 
 const reviewSchema = new mongoose.Schema(
   {
-    reaction:{
-      type:Number,
-      enum:["like","dislike","none"],
-      default:"none",
+    postId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "IdeaPost",
+      required: true,
+    },
+    like:{
+      type:Boolean,
+      default:false
     },
     comment: {
       type: String,
@@ -16,7 +20,12 @@ const reviewSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-  }
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { timestamps: true }
 )
 
 export default mongoose.model("Review", reviewSchema);

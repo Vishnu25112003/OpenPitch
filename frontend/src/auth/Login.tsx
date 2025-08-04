@@ -13,6 +13,7 @@ interface LoginFormData {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm<LoginFormData>();
 
 const loginUser = async (data: LoginFormData) => {
@@ -48,6 +49,8 @@ const loginUser = async (data: LoginFormData) => {
       alert("Login failed: Role not found. Please Recheck ");
       console.error("Unexpected role:", role);
     }
+
+    reset();
 
   } catch (error) {
     if (error instanceof Error) {

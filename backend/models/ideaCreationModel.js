@@ -23,10 +23,6 @@ const ideaPostSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    reviews: {
-      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
-      Comments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
-    },
   },
   { timestamps: true }
 );

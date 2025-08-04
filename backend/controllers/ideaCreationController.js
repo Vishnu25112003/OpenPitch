@@ -1,6 +1,7 @@
 
 import IdeaPost from "../models/ideaCreationModel.js";
 
+
 export const createIdea = async (req, res) => {
   try {
     console.log("User in request:", req.user); 
@@ -35,6 +36,8 @@ export const getAllIdeas = async (req, res) => {
     const ideas = await IdeaPost.find();
     res.status(200).json(ideas);
   } catch (error) {
+    console.error("Error getting ideas:", error); 
     res.status(500).json({ error: error.message });
   }
 };
+

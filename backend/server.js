@@ -6,6 +6,9 @@ dotenv.config();
 const app = express();
 
 import connectDB from "./config/db.js";
+import { fileURLToPath } from 'url'; 
+import path from 'path';
+
 connectDB();
 app.use(cors(
     {
@@ -15,13 +18,20 @@ app.use(cors(
 ));
 app.use(express.json());
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 import registrationData from "./routes/registrationRoutes.js";
 import loginData from "./routes/loginRoutes.js"; 
 import ideaCreationData from "./routes/ideaCreationRoutes.js"; 
+import reviewData from "./routes/reviewRoutes.js";
 
 app.use("/api/registration", registrationData);
 app.use("/api/login", loginData);
 app.use("/api/idea", ideaCreationData);
+app.use("/api/review", reviewData);
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const PORT = process.env.PORT || 5000;
 
