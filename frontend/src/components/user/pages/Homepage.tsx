@@ -45,30 +45,40 @@ const Homepage: React.FC = () => {
     navigate(`/comment/${id}`);
   };
 
-  const handleLike = async (id: string) => {
-    try {
-      console.log("Like clicked for ID:", id);
-      const response = await fetch(
-        `http://localhost:5000/api/review/like/${id}`,
-        {
-          method: "PUT",
-        }
-      );
+const handleLike = async (id: string) => {
+  const likedPosts = JSON.parse(localStorage.getItem("likedPosts") || "[]");
 
-      if (response.ok) {
-        const updatedPost = await response.json();
-        setPosts((prevPosts) =>
-          prevPosts.map((post) =>
-            post._id === id ? { ...post, like: updatedPost.like } : post
-          )
-        );
-      } else {
-        console.error("Failed to like the post");
-      }
-    } catch (error) {
-      console.error("Error liking post:", error);
+  if (likedPosts.includes(id)) {
+    alert("You have already liked this post.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`http://localhost:5000/api/review/like/${id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+
+    if (response.ok) {
+      const updatedPost = await response.json();
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post._id === id ? { ...post, like: updatedPost.like } : post
+        )
+      );
+      // Store post ID in localStorage
+      localStorage.setItem("likedPosts", JSON.stringify([...likedPosts, id]));
+    } else {
+      const errorData = await response.json();
+      alert(errorData.message || "Failed to like post");
     }
-  };
+  } catch (error) {
+    console.error("Error liking post:", error);
+  }
+};
+
 
   return (
     <div>

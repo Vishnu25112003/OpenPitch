@@ -5,22 +5,27 @@ import Comment from "../models/reviewModel.js";
 export const likeIdea = async (req, res) => {
   try {
     const ideaId = req.params.id;
+    const userId = req.user.id; 
 
-    const updatedIdea = await Idea.findByIdAndUpdate(
-      ideaId,
-      { $inc: { like: 1 } }, 
-      { new: true } 
-    );
+    const idea = await Idea.findById(ideaId);
 
-    if (!updatedIdea) {
-      return res.status(404).json({ message: "Idea not found" });
+    if (!idea) return res.status(404).json({ message: "Idea not found" });
+
+    if (idea.likedBy.includes(userId)) {
+      return res.status(400).json({ message: "You already liked this idea." });
     }
 
-    res.status(200).json(updatedIdea);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    idea.like += 1;
+    idea.likedBy.push(userId);
+    await idea.save();
+
+    res.json({ like: idea.like });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
+
 
 
 export const addComment = async (req, res) => {
