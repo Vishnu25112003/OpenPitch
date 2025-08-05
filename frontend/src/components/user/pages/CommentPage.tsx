@@ -3,31 +3,21 @@ import { useParams } from "react-router-dom";
 
 interface Comment {
   _id: string;
-  content: string;
+  commentText: string;
+  createdAt: string;
   userId: {
-    _id: string;
     name: string;
   };
-  createdAt: string;
 }
 
 const CommentPage: React.FC = () => {
-  const { id: ideaId } = useParams(); // ✅ Get ideaId from URL like /comment/:id
-
+  const { id } = useParams();
+  const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState("");
-
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const fetchComments = async () => {
     try {
-      const res = await fetch(
-        `http://localhost:5000/api/review/comment/${ideaId}`
-      );
-      if (!res.ok) {
-        console.error("Failed to fetch comments:", res.status);
-        return;
-      }
+      const res = await fetch(`http://localhost:5000/api/review/${id}`);
       const data = await res.json();
       setComments(data);
     } catch (err) {
@@ -35,75 +25,63 @@ const CommentPage: React.FC = () => {
     }
   };
 
-const handleSubmit = async () => {
-  if (!newComment) return;
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  console.log("Submitting comment:", newComment);
-  console.log("ideaId:", ideaId);
-  console.log("userId:", user._id);
+    try {
+      const res = await fetch(`http://localhost:5000/api/review/${id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ commentText }),
+      });
 
-  try {
-    const res = await fetch(`http://localhost:5000/api/review/comment`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        content: newComment,
-        ideaId,
-        userId: user._id,
-      }),
-    });
+      const data = await res.json();
 
-    const data = await res.json();
-    console.log("Response from server:", data);
-
-    if (res.ok) {
-      setNewComment("");
-      fetchComments();
-    } else {
-      console.error("Comment failed:", res.status);
+      if (res.ok) {
+        setCommentText("");
+        fetchComments(); // refresh comments
+      } else {
+        alert(data.message);
+      }
+    } catch (err) {
+      console.error("Error posting comment:", err);
     }
-  } catch (error) {
-    console.error("Comment error:", error);
-  }
-};
-
+  };
 
   useEffect(() => {
-    if (ideaId) {
-      fetchComments();
-    }
-  }, [ideaId]);
+    fetchComments();
+  }, []);
 
   return (
-    <div className="mt-4 p-4 border-t">
-      <h3 className="text-lg font-bold text-blue-800 mb-2">Comments</h3>
+    <div className="p-4 max-w-3xl mx-auto">
+      <h2 className="text-2xl font-bold mb-4 text-blue-600">Comments</h2>
 
-      <div className="mb-4">
+      <form onSubmit={handleCommentSubmit} className="mb-6">
         <textarea
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          className="w-full border rounded p-2"
-          rows={2}
-          placeholder="Write a comment..."
-        />
+          className="w-full p-2 border rounded mb-2"
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          placeholder="Write your comment here..."
+        ></textarea>
         <button
-          onClick={handleSubmit}
-          className="mt-2 bg-blue-600 text-white px-4 py-1 rounded"
+          type="submit"
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
-          Submit
+          Post Comment
         </button>
-      </div>
+      </form>
 
       <div>
         {comments.map((comment) => (
-          <div key={comment._id} className="mb-2">
-            <p className="text-sm text-gray-800">
-              <span className="font-semibold text-blue-700">
-                {comment.userId?.name || "Anonymous"}
-              </span>{" "}
-              commented at {new Date(comment.createdAt).toLocaleString()}
+          <div key={comment._id} className="border-b py-2">
+            <p className="font-semibold text-blue-700">{comment.userId.name}</p>
+            <p>{comment.commentText}</p>
+            <p className="text-sm text-gray-500">
+              {new Date(comment.createdAt).toLocaleString()}
             </p>
-            <p className="text-gray-600 ml-2">{comment.content}</p>
           </div>
         ))}
       </div>

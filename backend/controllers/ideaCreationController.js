@@ -32,7 +32,9 @@ export const createIdea = async (req, res) => {
 
 export const getAllIdeas = async (req, res) => {
   try {
-    const ideas = await IdeaPost.find();
+    const ideas = await IdeaPost.find()
+      .populate("userId", "name") // <== populate only the 'name' of the user
+      .sort({ createdAt: -1 });
     res.status(200).json(ideas);
   } catch (error) {
     console.error("Error getting ideas:", error); 
