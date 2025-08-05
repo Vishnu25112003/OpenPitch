@@ -1,54 +1,50 @@
+import Idea from "../models/ideaCreationModel.js"; 
 import Comment from "../models/reviewModel.js";
 
-export const postComment = async (req, res) => {
+
+export const likeIdea = async (req, res) => {
   try {
-    const { comment } = req.body;
-    const ideaId = req.params;
-    const userId = req.user.userId;
+    const ideaId = req.params.id;
 
-    const newComment = new Comment({
-      comment,
-      userId,
+    const updatedIdea = await Idea.findByIdAndUpdate(
       ideaId,
-    });
+      { $inc: { like: 1 } }, 
+      { new: true } 
+    );
 
-    const saved = await newComment.save();
+    if (!updatedIdea) {
+      return res.status(404).json({ message: "Idea not found" });
+    }
 
-    res.status(201).json({
-      success: true,
-      message: "Comment added successfully",
-      data: saved,
-    });
+    res.status(200).json(updatedIdea);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to add comment",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
-export const putLike = async (req, res) => {
+
+export const addComment = async (req, res) => {
   try {
-    const review = await Comment.findById(req.params.id);
-    if (!review) {
-      return res.status(404).json({
-        success: false,
-        message: "Review not found",
-      });
-    }
-    review.like += 1;
-    await review.save();
-    res.status(200).json({
-      success: true,
-      message: "Like added successfully",
-      data: review,
-    });
+    const { content, ideaId, userId } = req.body;
+
+    const newComment = new Comment({ content, ideaId, userId });
+    const saved = await newComment.save();
+
+    res.status(201).json(saved);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to add like",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getCommentsByIdea = async (req, res) => {
+  try {
+    const { ideaId } = req.params;
+
+    const comments = await Comment.find({ ideaId })
+      .populate("userId", "name")
+      .sort({ createdAt: -1 }); 
+    res.status(200).json(comments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { FaUser, FaComment, FaHeart } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 interface Idea {
   _id: string;
   title: string;
   description: string;
   category: string;
-  image?: string;  
+  image?: string;
+  like?: number;
   userId: { _id: string; name: string };
 }
 
 const Homepage: React.FC = () => {
+  const navigate = useNavigate();
+
   const [userName, setUserName] = useState<string>("");
   const [posts, setPosts] = useState<Idea[]>([]);
 
@@ -37,8 +41,33 @@ const Homepage: React.FC = () => {
     }
   }, []);
 
-  const handleComment = () => {
-    window.location.href = "/comment";
+  const handleComment = (id: string) => {
+    navigate(`/comment/${id}`);
+  };
+
+  const handleLike = async (id: string) => {
+    try {
+      console.log("Like clicked for ID:", id);
+      const response = await fetch(
+        `http://localhost:5000/api/review/like/${id}`,
+        {
+          method: "PUT",
+        }
+      );
+
+      if (response.ok) {
+        const updatedPost = await response.json();
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post._id === id ? { ...post, like: updatedPost.like } : post
+          )
+        );
+      } else {
+        console.error("Failed to like the post");
+      }
+    } catch (error) {
+      console.error("Error liking post:", error);
+    }
   };
 
   return (
@@ -81,11 +110,20 @@ const Homepage: React.FC = () => {
                 />
               )}
               <div className="flex justify-end">
-                <button className="cursor-pointer px-1" onClick={handleComment}>
+                <button
+                  className="cursor-pointer px-1"
+                  onClick={() => handleComment(post._id)}
+                >
                   <FaComment className="text-4xl text-blue-600 pt-4" />
                 </button>
-                <button className="cursor-pointer px-1" >
-                  <FaHeart className="text-4xl text-blue-600 pt-4" />
+                <button
+                  className="cursor-pointer px-1 flex items-center"
+                  onClick={() => handleLike(post._id)}
+                >
+                  <FaHeart className="text-4xl text-red-600 pt-4" />
+                  <span className="ml-2 text-lg text-gray-700">
+                    {post.like ?? 0}
+                  </span>
                 </button>
               </div>
             </div>

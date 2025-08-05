@@ -23,6 +23,10 @@ const ideaPostSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    like: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

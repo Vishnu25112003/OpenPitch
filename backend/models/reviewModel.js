@@ -1,31 +1,23 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const reviewSchema = new mongoose.Schema(
+const commentSchema = new mongoose.Schema(
   {
-    ideaId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "IdeaPost",
+    content: {
+      type: String,
       required: true,
     },
-    like:{
-      type: Number,
-      default:0,
-    },
-    comment: {
-      type: String,
-      default: null,
+    ideaId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Idea",
+      required: true,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
   },
   { timestamps: true }
-)
+);
 
-export default mongoose.model("Review", reviewSchema);
+export default mongoose.model("Comment", commentSchema);

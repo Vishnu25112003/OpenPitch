@@ -1,10 +1,11 @@
 import express from "express";
-import {  postComment, putLike } from "../controllers/reviewController.js";
-import verifyToken from "../middleware/auth.js";
+import { likeIdea, addComment, getCommentsByIdea } from "../controllers/reviewController.js";
 
 const router = express.Router();
 
-router.post("/comment/:ideaId", verifyToken, postComment);
-router.put("like/:id", putLike);
+router.put("/like/:id", likeIdea);
+
+router.post("/comment", addComment);
+router.get("/comment/:ideaId", getCommentsByIdea);
 
 export default router;

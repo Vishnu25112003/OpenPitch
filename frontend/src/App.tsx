@@ -13,27 +13,57 @@ import CommentPage from "./components/user/pages/CommentPage";
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-
-        {/* Login */}
+      {/* Login */}
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signin" element={<Signin />} />
       </Routes>
 
-        {/* User */}
+      {/* User */}
       <Routes>
-        <Route path="/homepage" element={<><Navbar /> <Homepage /><Verities/></>} />
-        <Route path="/profile" element={<><Navbar /> <Profile /><Verities/></> } />
-        <Route path="/create" element={ <><Navbar /> <CreatePost /><Verities/></> } />
-        <Route path="/comment" element={<><Navbar /> <CommentPage /><Verities/></>} />
+        <Route
+          path="/homepage"
+          element={
+            <>
+              <Navbar /> <Homepage />
+              <Verities />
+            </>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <>
+              <Navbar /> <Profile />
+              <Verities />
+            </>
+          }
+        />
+        <Route
+          path="/create"
+          element={
+            <>
+              <Navbar /> <CreatePost />
+              <Verities />
+            </>
+          }
+        />
+        <Route
+          path="/comment/:id"
+          element={
+            <>
+              <Navbar /> <CommentPage />
+              <Verities />
+            </>
+          }
+        />
       </Routes>
 
-        {/* Admin */}
+      {/* Admin */}
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
-
     </BrowserRouter>
   );
 };
