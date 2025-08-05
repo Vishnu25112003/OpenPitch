@@ -36,7 +36,7 @@ export const registerAdmin = async (req, res) => {
   }
 };
 
-export const getAllRegistrations = async (req, res) => {
+export const getUserProfile = async (req, res) => {
   try {
     const users = await Registration.find();
     res.status(200).json(users);
