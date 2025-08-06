@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import {AiOutlineDelete} from "react-icons/ai";
 
 interface Comment {
   _id: string;
@@ -42,7 +43,7 @@ const CommentPage: React.FC = () => {
 
       if (res.ok) {
         setCommentText("");
-        fetchComments(); // refresh comments
+        fetchComments(); 
       } else {
         alert(data.message);
       }
@@ -54,6 +55,31 @@ const CommentPage: React.FC = () => {
   useEffect(() => {
     fetchComments();
   }, []);
+
+  const handleDeleteComment = async (id: string) => {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/review/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      if (res.ok) {
+        fetchComments(); 
+      } else {
+        alert(data.message);
+      }
+    } catch (err) {
+      console.error("Error deleting comment:", err);
+    }
+  }
 
   return (
     <div className="p-4 max-w-3xl mx-auto">
@@ -82,6 +108,12 @@ const CommentPage: React.FC = () => {
             <p className="text-sm text-gray-500">
               {new Date(comment.createdAt).toLocaleString()}
             </p>
+            <button
+              onClick={() => handleDeleteComment(comment._id)}
+              className="text-red-500 hover:text-red-700"
+            >
+              <AiOutlineDelete />
+            </button>
           </div>
         ))}
       </div>

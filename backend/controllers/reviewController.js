@@ -4,7 +4,7 @@ import Comment from "../models/reviewModel.js";
 export const likeIdea = async (req, res) => {
   try {
     const ideaId = req.params.id;
-    const userId = req.user?.userId;
+    const userId = req.user.userId;
 
     if (!userId) {
       return res
@@ -29,6 +29,7 @@ export const likeIdea = async (req, res) => {
     idea.likedBy.push(userId);
     idea.like += 1;
 
+
     await idea.save();
 
     return res
@@ -39,7 +40,6 @@ export const likeIdea = async (req, res) => {
     res.status(500).json({ message: "Server error while liking the post" });
   }
 };
-
 
 export const addComment = async (req, res) => {
   try {
@@ -70,11 +70,24 @@ export const getCommentsForPost = async (req, res) => {
     const { postId } = req.params;
 
     const comments = await Comment.find({ postId })
-      .populate("userId", "name") // Only get user name
-      .sort({ createdAt: -1 }); // Latest first
+      .populate("userId", "name") 
+      .sort({ createdAt: -1 }); 
 
     res.status(200).json(comments);
   } catch (error) {
     res.status(500).json({ message: "Error getting comments", error });
   }
 };
+
+export const deleteComment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const comment = await Comment.findByIdAndDelete(id);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+    res.status(200).json({ message: "Comment deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting comment", error });
+  }
+}

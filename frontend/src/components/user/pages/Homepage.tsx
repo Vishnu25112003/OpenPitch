@@ -60,7 +60,6 @@ const Homepage: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Update like count
         setPosts((prevPosts) =>
           prevPosts.map((post) =>
             post._id === id ? { ...post, like: data.like } : post

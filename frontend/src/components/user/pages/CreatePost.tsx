@@ -16,27 +16,6 @@ const CreatePost: React.FC = () => {
     reset,
   } = useForm<FormCreationData>();
 
-  // const submit = async (data: FormCreationData) => {
-  //   try {
-  //     const response = await fetch("http://localhost:5000/api/idea/create", {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //         Authorization: `Bearer ${localStorage.getItem("token")}`,
-  //       },
-  //       credentials: "include",
-  //       body: JSON.stringify(data),
-  //     });
-  //     const result = await response.json();
-  //     alert(result.message);
-  //     console.log("Post response:", result);
-
-  //   } catch (error) {
-  //     alert("Post failed: " + error);
-  //     console.error("Post failed:", error);
-  //   }
-  // };
-
   const submit = async (data: FormCreationData) => {
     try {
       const token = localStorage.getItem("token");
@@ -91,16 +70,16 @@ const CreatePost: React.FC = () => {
           />
           <input
             type="text"
-            {...register("description", {
-              required: "Description is required",
-            })}
-            placeholder="Description"
+            {...register("category", { required: "Category is required" })}
+            placeholder="Category"
             className="border border-blue-500 rounded-md p-2"
           />
           <input
             type="text"
-            {...register("category", { required: "Category is required" })}
-            placeholder="Category"
+            {...register("description", {
+              required: "Description is required",
+            })}
+            placeholder="Description"
             className="border border-blue-500 rounded-md p-2"
           />
           <input

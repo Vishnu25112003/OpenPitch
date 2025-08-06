@@ -1,4 +1,3 @@
-// src/App.tsx
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import Login from "./auth/Login";
 import Signin from "./auth/Signin";

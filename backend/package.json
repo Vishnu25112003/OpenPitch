@@ -14,9 +14,7 @@
   "type": "module",
   "dependencies": {
     "bcryptjs": "^3.0.2",
-    "cloudinary": "^2.7.0",
     "cors": "^2.8.5",
-    "dayjs": "^1.11.13",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
     "express-validator": "^7.2.1",
@@ -25,8 +23,6 @@
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.5",
-    "nodemon": "^3.1.10",
-    "pdfkit": "^0.17.1",
-    "socket.io": "^4.8.1"
+    "nodemon": "^3.1.10"
   }
 }
