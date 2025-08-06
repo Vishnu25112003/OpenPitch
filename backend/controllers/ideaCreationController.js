@@ -42,3 +42,22 @@ export const getAllIdeas = async (req, res) => {
   }
 };
 
+export const getTopPosts = async (req, res) => {
+  try {
+    const topPosts = await IdeaPost.aggregate([
+      { $match: { isTopPost: true } },
+      {
+        $addFields: {
+          likeCount: { $size: "$likedBy" },
+        },
+      },
+      { $sort: { likeCount: -1 } },
+    ]);
+
+    res.status(200).json(topPosts);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching top posts", error });
+  }
+};
+
+

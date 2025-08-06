@@ -31,6 +31,10 @@ const ideaPostSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Users",
     },
+    isTopPost: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

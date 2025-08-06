@@ -18,26 +18,29 @@ export const likeIdea = async (req, res) => {
       return res.status(404).json({ message: "Idea not found" });
     }
 
-    const alreadyLiked = idea.likedBy.includes(userId);
+    const index = idea.likedBy.findIndex(
+      (id) => id.toString() === userId.toString()
+    );
 
-    if (alreadyLiked) {
-      return res
-        .status(400)
-        .json({ message: "You have already liked this post" });
+    if (index !== -1) {
+      idea.likedBy.splice(index, 1);
+    } else {
+      idea.likedBy.push(userId);
     }
 
-    idea.likedBy.push(userId);
-    idea.like += 1;
-
+    idea.like = idea.likedBy.length;
 
     await idea.save();
 
-    return res
-      .status(200)
-      .json({ message: "Post liked successfully", like: idea.like });
+    return res.status(200).json({
+      message: index !== -1 ? "Like removed" : "Post liked",
+      like: idea.like,
+    });
   } catch (error) {
-    console.error("Error liking post:", error);
-    res.status(500).json({ message: "Server error while liking the post" });
+    console.error("Error toggling like:", error);
+    res
+      .status(500)
+      .json({ message: "Server error while toggling like", error });
   }
 };
 

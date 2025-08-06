@@ -8,6 +8,7 @@ import Dashboard from "./components/admin/pages/Dashboard";
 import Navbar from "./components/user/components/Navbar";
 import Verities from "./components/user/components/Verities";
 import CommentPage from "./components/user/pages/CommentPage";
+import TrendingPost from "./components/user/pages/TrendingPost";
 
 const App: React.FC = () => {
   return (
@@ -57,6 +58,7 @@ const App: React.FC = () => {
             </>
           }
         />
+        <Route path="/toppost" element={<TrendingPost />} />
       </Routes>
 
       {/* Admin */}

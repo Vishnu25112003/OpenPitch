@@ -83,6 +83,7 @@ const Homepage: React.FC = () => {
         <h2 className="text-2xl font-bold text-center text-blue-600 mb-8">
           All Ideas
         </h2>
+        <button onClick={() => navigate("/toppost")} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Trending Posts</button>
         <div className="flex flex-col space-y-4 justify-center items-center ">
           {posts.map((post) => (
             <div

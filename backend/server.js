@@ -8,6 +8,7 @@ const app = express();
 import connectDB from "./config/db.js";
 import { fileURLToPath } from 'url'; 
 import path from 'path';
+import "./cron/topPostCron.js";
 
 connectDB();
 app.use(cors(
