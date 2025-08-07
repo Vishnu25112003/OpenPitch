@@ -73,8 +73,8 @@ export const getCommentsForPost = async (req, res) => {
     const { postId } = req.params;
 
     const comments = await Comment.find({ postId })
-      .populate("userId", "name") 
-      .sort({ createdAt: -1 }); 
+      .populate("userId", "name")
+      .sort({ createdAt: -1 });
 
     res.status(200).json(comments);
   } catch (error) {
@@ -93,4 +93,4 @@ export const deleteComment = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Error deleting comment", error });
   }
-}
+};

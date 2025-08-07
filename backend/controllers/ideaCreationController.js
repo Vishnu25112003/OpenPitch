@@ -53,11 +53,8 @@ export const getTopPosts = async (req, res) => {
       },
       { $sort: { likeCount: -1 } },
     ]);
-
     res.status(200).json(topPosts);
   } catch (error) {
     res.status(500).json({ message: "Error fetching top posts", error });
   }
 };
-
-

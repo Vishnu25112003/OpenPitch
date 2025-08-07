@@ -9,6 +9,7 @@ import Navbar from "./components/user/components/Navbar";
 import Verities from "./components/user/components/Verities";
 import CommentPage from "./components/user/pages/CommentPage";
 import TrendingPost from "./components/user/pages/TrendingPost";
+import Sidebar from "./components/admin/components/Sidebar";
 
 const App: React.FC = () => {
   return (
@@ -63,6 +64,7 @@ const App: React.FC = () => {
 
       {/* Admin */}
       <Routes>
+        <Route path="/sidebar" element={<Sidebar />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
