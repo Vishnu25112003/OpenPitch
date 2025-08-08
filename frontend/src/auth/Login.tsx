@@ -49,7 +49,7 @@ const Login: React.FC = () => {
         navigate("/homepage");
       } else if (role === "Admin") {
         alert("Admin Login successful!");
-        navigate("/dashboard");
+        navigate("/Dashboard");
       } else {
         alert("Login failed: Role not found. Please Recheck ");
         console.error("Unexpected role:", role);

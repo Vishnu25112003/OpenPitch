@@ -53,3 +53,21 @@ export const updateUserProfile = async (req, res) => {
     res.status(500).json({ error: "Failed to update user" });
   }
 }
+
+export const deleteUserProfile = async (req, res) => {
+  try {
+    await Registration.findByIdAndDelete(req.params.id);
+    res.json({ message: "User deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+}
+
+export const getUserCount = async (req, res) => {
+  try {
+    const users = await Registration.countDocuments();
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

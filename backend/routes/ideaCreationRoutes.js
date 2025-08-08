@@ -3,6 +3,8 @@ import {
   createIdea,
   getAllIdeas,
   getTopPosts,
+  postCounter,
+  deleteIdea,
 } from "../controllers/ideaCreationController.js";
 import { verifyToken } from "../middleware/auth.js";
 import { upload } from '../middleware/uploads.js';
@@ -17,5 +19,7 @@ router.post('/create', verifyToken,upload.single("image"),
 router.get('/ideas', getAllIdeas);
 router.get('/toppost', getTopPosts);
 router.get("/runcron", runTopPostCron);
+router.get("/postcount", postCounter);
+router.delete("/delete/:id", verifyToken, deleteIdea);
 
 export default router;

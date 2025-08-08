@@ -10,25 +10,43 @@ import Verities from "./components/user/components/Verities";
 import CommentPage from "./components/user/pages/CommentPage";
 import TrendingPost from "./components/user/pages/TrendingPost";
 import Sidebar from "./components/admin/components/Sidebar";
+import Posts from "./components/admin/pages/Posts";
+import Users from "./components/admin/pages/Users";
+import AdminNavbar from "./components/admin/components/AdminNavbar";
+
+const AdminPage = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="min-h-screen flex">
+      <div className="fixed left-0 top-0 h-screen w-64">
+        <Sidebar />
+      </div>
+      <div className="ml-64 flex flex-col w-full">
+        <div className="h-16 bg-gray-800 text-white flex items-center px-4 shadow">
+          <AdminNavbar />
+        </div>
+        <main className="flex-1 bg-gray-100 p-6">{children}</main>
+      </div>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      {/* Login */}
+      {/* Auth Routes */}
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signin" element={<Signin />} />
       </Routes>
 
-      {/* User */}
+      {/* User Routes */}
       <Routes>
         <Route
           path="/homepage"
           element={
             <>
-              <Navbar /> <Homepage />
-              <Verities />
+              <Navbar /> <Homepage /> <Verities />
             </>
           }
         />
@@ -36,8 +54,7 @@ const App: React.FC = () => {
           path="/profile"
           element={
             <>
-              <Navbar /> <Profile />
-              <Verities />
+              <Navbar /> <Profile /> <Verities />
             </>
           }
         />
@@ -45,8 +62,7 @@ const App: React.FC = () => {
           path="/create"
           element={
             <>
-              <Navbar /> <CreatePost />
-              <Verities />
+              <Navbar /> <CreatePost /> <Verities />
             </>
           }
         />
@@ -54,18 +70,56 @@ const App: React.FC = () => {
           path="/comment/:id"
           element={
             <>
-              <Navbar /> <CommentPage />
+              <Navbar /> <CommentPage /> <Verities />
+            </>
+          }
+        />
+        <Route
+          path="/toppost"
+          element={
+            <>
+              <Navbar />
+              <TrendingPost />
               <Verities />
             </>
           }
         />
-        <Route path="/toppost" element={<TrendingPost />} />
       </Routes>
 
-      {/* Admin */}
+      {/* Admin Routes - Always show Sidebar */}
       <Routes>
-        <Route path="/sidebar" element={<Sidebar />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+          path="/dashboard"
+          element={
+            <AdminPage>
+              <Dashboard />
+            </AdminPage>
+          }
+        />
+        <Route
+          path="/posts"
+          element={
+            <AdminPage>
+              <Posts />
+            </AdminPage>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <AdminPage>
+              <Users />
+            </AdminPage>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <AdminPage>
+              <h1>Settings</h1>
+            </AdminPage>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

@@ -94,3 +94,13 @@ export const deleteComment = async (req, res) => {
     res.status(500).json({ message: "Error deleting comment", error });
   }
 };
+
+export const getCommentCount = async (req, res) => {
+  try {
+    const count = await Comment.countDocuments(); 
+    res.status(200).json({ count });
+  } catch (error) {
+    console.error("Error getting comments:", error);
+    res.status(500).json({ message: "Error getting comments", error });
+  }
+};
