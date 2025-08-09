@@ -4,7 +4,6 @@ import Signin from "./auth/Signin";
 import Homepage from "./components/user/pages/Homepage";
 import Profile from "./components/user/pages/Profile";
 import CreatePost from "./components/user/pages/CreatePost";
-import Dashboard from "./components/admin/pages/Dashboard";
 import Navbar from "./components/user/components/Navbar";
 import Verities from "./components/user/components/Verities";
 import CommentPage from "./components/user/pages/CommentPage";
@@ -89,14 +88,6 @@ const App: React.FC = () => {
       {/* Admin Routes - Always show Sidebar */}
       <Routes>
         <Route
-          path="/dashboard"
-          element={
-            <AdminPage>
-              <Dashboard />
-            </AdminPage>
-          }
-        />
-        <Route
           path="/posts"
           element={
             <AdminPage>
@@ -109,14 +100,6 @@ const App: React.FC = () => {
           element={
             <AdminPage>
               <Users />
-            </AdminPage>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <AdminPage>
-              <h1>Settings</h1>
             </AdminPage>
           }
         />

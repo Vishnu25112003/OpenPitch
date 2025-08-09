@@ -1,41 +1,46 @@
+// Sidebar.tsx
 import React from "react";
-import { FaHome, FaPlus, FaUser, FaBars } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import {
+  FaUsers,
+  FaFileAlt,
+} from "react-icons/fa";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Common button styles
-  const menuItemClass =
-    "px-4 py-2 flex items-center cursor-pointer hover:bg-blue-500 hover:text-white transition-colors duration-200";
+  const menuItems = [
+    { path: "/users", icon: FaUsers, label: "Users" },
+    { path: "/posts", icon: FaFileAlt, label: "Posts" },
+  ];
+
+  const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="w-64 h-screen bg-gray-800 text-white fixed left-0 top-0 flex flex-col">
-      {/* Top Bar */}
-      <div className="flex items-center justify-around h-16 bg-gray-800">
-        <h1 className="text-2xl font-semibold text-blue-600">OpenPitch</h1>
-        <FaBars className="ml-2 text-blue-500" />
+    <aside className="bg-white shadow-lg w-64 h-screen fixed left-0 top-16 z-40">
+      <div className="p-6">
+        <nav className="space-y-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isActive(item.path)
+                    ? "bg-blue-500 text-white shadow-md"
+                    : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                }`}
+              >
+                <Icon className="text-lg" />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
-      {/* Menu List */}
-      <div className="flex-1 overflow-y-auto">
-        <ul className="mt-4 space-y-1">
-          <li onClick={() => navigate("/dashboard")} className={menuItemClass}>
-            <FaHome className="mr-2 text-blue-300" />
-            <span>Dashboard</span>
-          </li>
-
-          <li onClick={() => navigate("/posts")} className={menuItemClass}>
-            <FaPlus className="mr-2 text-blue-300" />
-            <span>Posts</span>
-          </li>
-
-          <li onClick={() => navigate("/users")} className={menuItemClass}>
-            <FaUser className="mr-2 text-blue-300" />
-            <span>Users</span>
-          </li>
-        </ul>
-      </div>
-    </div>
+    </aside>
   );
 };
 
