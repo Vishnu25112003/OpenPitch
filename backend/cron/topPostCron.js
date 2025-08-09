@@ -23,4 +23,4 @@ export const runTopPostCron = async () => {
     console.error("Cron Error:", err);
   }
 };
-cron.schedule("0 0 * * *", runTopPostCron);
+cron.schedule("0 12 * * *", runTopPostCron);

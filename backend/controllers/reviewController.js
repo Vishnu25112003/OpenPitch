@@ -1,5 +1,6 @@
 import IdeaPost from "../models/ideaCreationModel.js";
 import Comment from "../models/reviewModel.js";
+import SavedPost from "../models/savedPostModel.js";
 
 export const likeIdea = async (req, res) => {
   try {
@@ -95,12 +96,35 @@ export const deleteComment = async (req, res) => {
   }
 };
 
-export const getCommentCount = async (req, res) => {
+export const savePost = async (req, res) => {
   try {
-    const count = await Comment.countDocuments(); 
-    res.status(200).json({ count });
+    const { postId } = req.params;
+    const userId = req.user.userId;
+    const existingSave = await SavedPost.findOne({ postId, userId });
+
+    if (existingSave) {
+      await SavedPost.findByIdAndDelete(existingSave._id);
+      return res.status(200).json({ message: "Post unsaved successfully" });
+    } else {
+      const newSave = new SavedPost({ postId, userId });
+      await newSave.save();
+      return res.status(200).json({ message: "Post saved successfully" });
+    }
   } catch (error) {
-    console.error("Error getting comments:", error);
-    res.status(500).json({ message: "Error getting comments", error });
+    res.status(500).json({ message: "Error saving post", error });
+  }
+};
+
+export const getSavedPosts = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const savedPosts = await SavedPost.find({ userId })
+      .populate("postId")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(savedPosts);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching saved posts", error });
   }
 };

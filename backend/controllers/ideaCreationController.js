@@ -58,15 +58,6 @@ export const getTopPosts = async (req, res) => {
     res.status(500).json({ message: "Error fetching top posts", error });
   }
 };
- 
-export const postCounter = async (req, res) => {
-  try {
-    const count = await IdeaPost.countDocuments(); 
-    res.json({ count });
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
-};
 
 export const deleteIdea = async (req, res) => {
   try {

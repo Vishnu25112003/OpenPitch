@@ -1,5 +1,4 @@
-// Posts.tsx
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FaHeart,
   FaComment,
@@ -29,6 +28,15 @@ interface Post {
   photo?: string;
 }
 
+const API_BASE = "http://localhost:5000";
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+};
+
 const Posts: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
@@ -36,133 +44,152 @@ const Posts: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/idea/ideas");
-        const data = await response.json();
-        console.log("Posts data:", data);
-
-        // Debug: Check what image fields are available
-        if (data.length > 0) {
-          console.log("Sample post structure:", data[0]);
-          console.log(
-            "Available image fields:",
-            Object.keys(data[0]).filter(
-              (key) =>
-                key.toLowerCase().includes("image") ||
-                key.toLowerCase().includes("img") ||
-                key.toLowerCase().includes("photo") ||
-                key.toLowerCase().includes("picture")
-            )
-          );
+        setLoading(true);
+        // If your GET requires auth, include headers. If not, this still works.
+        const res = await fetch(`${API_BASE}/api/idea/ideas`, {
+          headers: getAuthHeaders(),
+        });
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            alert("Authentication required. Please log in again.");
+            window.location.replace("/login");
+            return;
+          }
+          throw new Error(`Failed to load posts (status ${res.status})`);
         }
-
+        const data = await res.json();
         setPosts(data);
         setFilteredPosts(data);
       } catch (error) {
         console.error("Error fetching posts:", error);
+        alert("Failed to load posts. Please try again.");
       } finally {
         setLoading(false);
       }
     };
-
     fetchPosts();
   }, []);
 
   useEffect(() => {
-    const filtered = posts.filter(
-      (post) =>
-        post.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.userId?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredPosts(filtered);
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) {
+      setFilteredPosts(posts);
+      return;
+    }
+    try {
+      const filtered = posts.filter((post) => {
+        const desc = post.description?.toLowerCase() || "";
+        const cat = post.category?.toLowerCase() || "";
+        const user = post.userId?.name?.toLowerCase() || "";
+        return desc.includes(term) || cat.includes(term) || user.includes(term);
+      });
+      setFilteredPosts(filtered);
+    } catch (e) {
+      console.error("Filter error:", e);
+      setFilteredPosts(posts);
+    }
   }, [searchTerm, posts]);
 
-  // Function to get image URL from different possible field names
+  // Resolve image URL from various possible fields and formats
   const getImageUrl = (post: Post): string | null => {
-    const possibleImageFields = [
+    const candidates = [
       post.image,
       post.imageUrl,
       post.img,
       post.picture,
       post.photo,
-      (post as any).Image,
-      (post as any).ImageUrl,
-      (post as any).IMG,
-      (post as any).Picture,
-      (post as any).Photo,
+      (post as any)?.Image,
+      (post as any)?.ImageUrl,
+      (post as any)?.IMG,
+      (post as any)?.Picture,
+      (post as any)?.Photo,
     ];
 
-    for (const imageField of possibleImageFields) {
-      if (
-        imageField &&
-        typeof imageField === "string" &&
-        imageField.trim() !== ""
-      ) {
-        // Handle relative URLs
-        if (
-          imageField.startsWith("/uploads") ||
-          imageField.startsWith("uploads")
-        ) {
-          return `http://localhost:5000/${
-            imageField.startsWith("/") ? imageField.slice(1) : imageField
-          }`;
-        }
-        // Handle full URLs
-        if (imageField.startsWith("http")) {
-          return imageField;
-        }
-        // Handle base64 images
-        if (imageField.startsWith("data:image")) {
-          return imageField;
-        }
-        // Assume it's a filename in uploads folder
-        return `http://localhost:5000/uploads/${imageField}`;
+    for (const c of candidates) {
+      if (typeof c === "string" && c.trim() !== "") {
+        const val = c.trim();
+        if (val.startsWith("http")) return val;
+        if (val.startsWith("data:image")) return val;
+        if (val.startsWith("/uploads")) return `${API_BASE}${val}`;
+        if (val.startsWith("uploads")) return `${API_BASE}/${val}`;
+        return `${API_BASE}/uploads/${val}`;
       }
     }
     return null;
   };
 
-  const handleDelete = async (postId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
+  const handleDelete = async (postId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    // Ensure token exists before calling API
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Authentication token not found. Please log in again.");
+      window.location.replace("/login");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this post?")) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/idea/delete/${postId}`,
-        {
-          method: "DELETE",
-        }
-      );
+      setDeletingId(postId);
+      const res = await fetch(`${API_BASE}/api/idea/delete/${postId}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
 
-      if (!response.ok) {
-        throw new Error("Failed to delete post");
+      if (!res.ok) {
+        // Handle common auth errors clearly
+        if (res.status === 401 || res.status === 403) {
+          alert("Unauthorized. Please log in again.");
+          window.location.replace("/login");
+          return;
+        }
+        let msg = `Failed to delete (status ${res.status})`;
+        try {
+          const err = await res.json();
+          if (err?.message) msg = err.message;
+        } catch {}
+        alert(msg);
+        return;
       }
 
-      setPosts((prevPosts) => prevPosts.filter((post) => post._id !== postId));
+      // Update local state
+      setPosts((prev) => prev.filter((p) => p._id !== postId));
+      setFilteredPosts((prev) => prev.filter((p) => p._id !== postId));
+
+      if (selectedPost?._id === postId) {
+        setSelectedPost(null);
+        document.body.style.overflow = "unset";
+      }
+
       alert("Post deleted successfully!");
-    } catch (error) {
-      console.error("Error deleting post:", error);
+    } catch (err) {
+      console.error("Error deleting post:", err);
       alert("Error deleting post. Please try again.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
   const openPostModal = (post: Post) => {
     setSelectedPost(post);
-    document.body.style.overflow = "hidden"; // Prevent background scrolling
+    document.body.style.overflow = "hidden";
   };
 
   const closePostModal = () => {
     setSelectedPost(null);
-    document.body.style.overflow = "unset"; // Restore scrolling
+    document.body.style.overflow = "unset";
   };
 
   const truncateDescription = (text: string, maxLength: number = 120) => {
-    if (text.length <= maxLength) return text;
-    return text.slice(0, maxLength) + "...";
+    if (!text) return "";
+    return text.length <= maxLength ? text : text.slice(0, maxLength) + "...";
   };
 
   if (loading) {
@@ -220,7 +247,7 @@ const Posts: React.FC = () => {
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div className="relative flex-1 max-w-md">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Search posts..."
@@ -248,7 +275,6 @@ const Posts: React.FC = () => {
             </p>
           </div>
         ) : viewMode === "grid" ? (
-          /* Grid View */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredPosts.map((post) => {
               const imageUrl = getImageUrl(post);
@@ -265,15 +291,11 @@ const Posts: React.FC = () => {
                         src={imageUrl}
                         alt="Post"
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        onLoad={() =>
-                          console.log("Image loaded successfully:", imageUrl)
-                        }
                         onError={(e) => {
-                          console.log("Image failed to load:", imageUrl);
                           (e.target as HTMLImageElement).style.display = "none";
-                          (
-                            e.target as HTMLImageElement
-                          ).nextElementSibling?.classList.remove("hidden");
+                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove(
+                            "hidden"
+                          );
                         }}
                       />
                     ) : null}
@@ -288,7 +310,6 @@ const Posts: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Category Badge */}
                     <div className="absolute top-3 left-3">
                       <span className="bg-white bg-opacity-90 backdrop-blur-sm text-gray-800 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center">
                         <FaTag className="mr-1" />
@@ -296,12 +317,21 @@ const Posts: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Delete Button */}
                     <button
                       onClick={(e) => handleDelete(post._id, e)}
-                      className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300"
+                      disabled={deletingId === post._id}
+                      className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 ${
+                        deletingId === post._id
+                          ? "bg-gray-300 cursor-not-allowed text-white"
+                          : "bg-red-500 hover:bg-red-600 text-white"
+                      }`}
+                      title="Delete post"
                     >
-                      <FaTrash className="text-sm" />
+                      {deletingId === post._id ? (
+                        <span className="text-xs">...</span>
+                      ) : (
+                        <FaTrash className="text-sm" />
+                      )}
                     </button>
                   </div>
 
@@ -313,7 +343,6 @@ const Posts: React.FC = () => {
                       )}
                     </p>
 
-                    {/* Meta Information */}
                     <div className="flex items-center justify-between text-xs text-gray-500">
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-1">
@@ -333,7 +362,6 @@ const Posts: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Stats */}
                     <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-1 text-red-500">
@@ -357,7 +385,6 @@ const Posts: React.FC = () => {
             })}
           </div>
         ) : (
-          /* List View */
           <div className="space-y-4">
             {filteredPosts.map((post) => {
               const imageUrl = getImageUrl(post);
@@ -368,7 +395,6 @@ const Posts: React.FC = () => {
                   onClick={() => openPostModal(post)}
                 >
                   <div className="flex items-start p-6 space-x-4">
-                    {/* Image Thumbnail */}
                     <div className="flex-shrink-0 w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg overflow-hidden">
                       {imageUrl ? (
                         <img
@@ -376,15 +402,10 @@ const Posts: React.FC = () => {
                           alt="Post"
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            console.log(
-                              "List view image failed to load:",
-                              imageUrl
+                            (e.target as HTMLImageElement).style.display = "none";
+                            (e.target as HTMLImageElement).nextElementSibling?.classList.remove(
+                              "hidden"
                             );
-                            (e.target as HTMLImageElement).style.display =
-                              "none";
-                            (
-                              e.target as HTMLImageElement
-                            ).nextElementSibling?.classList.remove("hidden");
                           }}
                         />
                       ) : null}
@@ -397,7 +418,6 @@ const Posts: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Content */}
                     <div className="flex-1 space-y-3">
                       <div className="flex items-start justify-between">
                         <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center">
@@ -406,9 +426,15 @@ const Posts: React.FC = () => {
                         </span>
                         <button
                           onClick={(e) => handleDelete(post._id, e)}
-                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          disabled={deletingId === post._id}
+                          className={`text-white p-2 rounded-lg transition-colors ${
+                            deletingId === post._id
+                              ? "bg-gray-300 cursor-not-allowed"
+                              : "bg-red-500 hover:bg-red-600"
+                          }`}
+                          title="Delete post"
                         >
-                          <FaTrash />
+                          {deletingId === post._id ? "Deleting..." : <FaTrash />}
                         </button>
                       </div>
 
@@ -460,13 +486,13 @@ const Posts: React.FC = () => {
           </div>
         )}
 
-        {/* Glass Effect Modal */}
+        {/* Glass/Mirror Effect Modal */}
         {selectedPost && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{
               background:
-                "linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.2))",
+                "linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.25))",
               backdropFilter: "blur(10px)",
               WebkitBackdropFilter: "blur(10px)",
             }}
@@ -483,19 +509,13 @@ const Posts: React.FC = () => {
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Close Button */}
               <button
                 onClick={closePostModal}
                 className="absolute top-4 right-4 z-10 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-600 p-3 rounded-full transition-all duration-300 shadow-lg"
-                style={{
-                  backdropFilter: "blur(10px)",
-                  WebkitBackdropFilter: "blur(10px)",
-                }}
               >
                 <FaTimes className="text-lg" />
               </button>
 
-              {/* Image Section */}
               {(() => {
                 const imageUrl = getImageUrl(selectedPost);
                 return imageUrl ? (
@@ -522,7 +542,6 @@ const Posts: React.FC = () => {
                 );
               })()}
 
-              {/* Content Section */}
               <div className="p-8 space-y-6">
                 <div className="flex items-center justify-between">
                   <span
@@ -530,8 +549,6 @@ const Posts: React.FC = () => {
                     style={{
                       background:
                         "linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.2))",
-                      backdropFilter: "blur(10px)",
-                      WebkitBackdropFilter: "blur(10px)",
                       border: "1px solid rgba(59, 130, 246, 0.3)",
                     }}
                   >
@@ -563,8 +580,6 @@ const Posts: React.FC = () => {
                     style={{
                       background:
                         "linear-gradient(135deg, rgba(255,255,255,0.5), rgba(255,255,255,0.3))",
-                      backdropFilter: "blur(5px)",
-                      WebkitBackdropFilter: "blur(5px)",
                       border: "1px solid rgba(255,255,255,0.3)",
                     }}
                   >
@@ -584,22 +599,30 @@ const Posts: React.FC = () => {
                       <div className="flex items-center space-x-3">
                         <FaCalendar className="text-xl" />
                         <span className="text-lg">
-                          {new Date(selectedPost.createdAt).toLocaleDateString(
-                            "en-GB"
-                          )}
+                          {new Date(
+                            selectedPost.createdAt
+                          ).toLocaleDateString("en-GB")}
                         </span>
                       </div>
                     )}
                   </div>
                   <button
-                    onClick={(e) => {
-                      handleDelete(selectedPost._id, e);
-                      closePostModal();
-                    }}
-                    className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl flex items-center space-x-3 transition-all duration-300 shadow-lg transform hover:scale-105"
+                    onClick={(e) => handleDelete(selectedPost._id, e)}
+                    disabled={deletingId === selectedPost._id}
+                    className={`px-6 py-3 rounded-xl flex items-center space-x-3 transition-all duration-300 shadow-lg ${
+                      deletingId === selectedPost._id
+                        ? "bg-gray-300 cursor-not-allowed text-white"
+                        : "bg-red-500 hover:bg-red-600 text-white"
+                    }`}
                   >
-                    <FaTrash />
-                    <span className="font-medium">Delete Post</span>
+                    {deletingId === selectedPost._id ? (
+                      <span>Deleting...</span>
+                    ) : (
+                      <>
+                        <FaTrash />
+                        <span className="font-medium">Delete Post</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

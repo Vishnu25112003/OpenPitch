@@ -25,111 +25,226 @@ interface Idea {
   userId: { _id: string; name: string };
   createdAt?: string;
   comments?: number;
+  savedBy?: string[];
 }
 
 const Homepage: React.FC = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState("");
   const [userAvatar, setUserAvatar] = useState("");
+  const [, setCurrentUserId] = useState("");
   const [posts, setPosts] = useState<Idea[]>([]);
   const [loading, setLoading] = useState(true);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set());
   const [selectedPost, setSelectedPost] = useState<Idea | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Check authentication on component mount
   useEffect(() => {
-    const fetchIdeas = async () => {
+    const checkAuth = () => {
+      const storedUser = localStorage.getItem("user");
+      const token = localStorage.getItem("token");
+
+      if (!storedUser || !token) {
+        navigate("/login");
+        return false;
+      }
+
       try {
-        setLoading(true);
-        const response = await fetch("http://localhost:5000/api/idea/ideas");
-        const data = await response.json();
-        setPosts(data);
+        const user = JSON.parse(storedUser);
+        setUserName(user.name);
+        setCurrentUserId(user._id);
+        setUserAvatar(
+          user.avatar ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(
+              user.name
+            )}&background=6366f1&color=fff`
+        );
+        return true;
       } catch (error) {
-        console.error("Error fetching ideas:", error);
-      } finally {
-        setLoading(false);
+        console.error("Error parsing user data:", error);
+        navigate("/login");
+        return false;
       }
     };
-    fetchIdeas();
-  }, []);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setUserName(user.name);
-      setUserAvatar(
-        user.avatar ||
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(
-            user.name
-          )}&background=6366f1&color=fff`
-      );
+    if (checkAuth()) {
+      fetchIdeas();
     }
-  }, []);
+  }, [navigate]);
+
+  const fetchIdeas = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch("http://localhost:5000/api/idea/ideas");
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setPosts(data);
+
+      // Initialize saved posts from backend data
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        const userSavedPosts = new Set<string>();
+        data.forEach((post: Idea) => {
+          if (post.savedBy && post.savedBy.includes(user._id)) {
+            userSavedPosts.add(post._id);
+          }
+        });
+        setSavedPosts(userSavedPosts);
+      }
+    } catch (error) {
+      console.error("Error fetching ideas:", error);
+      setError("Failed to load posts. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleComment = (id: string) => {
     navigate(`/comment/${id}`);
   };
 
   const handleLike = async (id: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please login to like posts");
+      navigate("/login");
+      return;
+    }
+
     try {
       const response = await fetch(
         `http://localhost:5000/api/review/like/${id}`,
         {
           method: "PUT",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
         }
       );
-      const data = await response.json();
-      if (response.ok) {
-        setPosts((prevPosts) =>
-          prevPosts.map((post) =>
-            post._id === id ? { ...post, like: data.like } : post
-          )
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
         );
-        setLikedPosts((prev) => {
-          const newSet = new Set(prev);
-          if (newSet.has(id)) {
-            newSet.delete(id);
-          } else {
-            newSet.add(id);
-          }
-          return newSet;
-        });
-      } else {
-        alert(data.message);
       }
+
+      const data = await response.json();
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post._id === id ? { ...post, like: data.like } : post
+        )
+      );
+      setLikedPosts((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) {
+          newSet.delete(id);
+        } else {
+          newSet.add(id);
+        }
+        return newSet;
+      });
     } catch (error) {
       console.error("Error liking post:", error);
+      alert(
+        `Failed to like post: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   };
 
-  const handleSave = (id: string) => {
-    setSavedPosts((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
+  // Enhanced save function with proper error handling
+  const handleSave = async (id: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please login to save posts");
+      navigate("/login");
+      return;
+    }
+
+    const isCurrentlySaved = savedPosts.has(id);
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/review/save/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ savePost: !isCurrentlySaved }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `HTTP error! status: ${response.status}`;
+
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+
+        throw new Error(errorMessage);
       }
-      return newSet;
-    });
+
+      const data = await response.json();
+
+      // Update local state
+      setSavedPosts((prev) => {
+        const newSet = new Set(prev);
+        if (isCurrentlySaved) {
+          newSet.delete(id);
+          alert("Post removed from saved posts!");
+        } else {
+          newSet.add(id);
+          // alert("Post saved successfully!");
+        }
+        return newSet;
+      });
+
+      // Update posts with new saved data if provided
+      if (data.idea && data.idea.savedBy) {
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post._id === id ? { ...post, savedBy: data.idea.savedBy } : post
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error saving post:", error);
+      alert(
+        `Failed to ${isCurrentlySaved ? "unsave" : "save"} post: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
   };
 
   const openPostModal = (post: Idea) => {
     setSelectedPost(post);
     setShowModal(true);
-    // Prevent body scroll when modal is open
     document.body.style.overflow = "hidden";
   };
 
   const closePostModal = () => {
     setSelectedPost(null);
     setShowModal(false);
-    // Re-enable body scroll
     document.body.style.overflow = "unset";
   };
 
@@ -157,13 +272,11 @@ const Homepage: React.FC = () => {
     return colors[category.toLowerCase()] || colors.default;
   };
 
-  // Function to get 2-line description (approximately 100-120 characters)
   const getTwoLineDescription = (description: string) => {
     if (description.length <= 120) return description;
     return description.substring(0, 120) + "...";
   };
 
-  // Function to check if description needs truncation for 2-line display
   const needsTruncation = (description: string) => {
     return description.length > 120;
   };
@@ -185,6 +298,29 @@ const Homepage: React.FC = () => {
     </div>
   );
 
+  // Error UI component
+  const ErrorDisplay = ({
+    message,
+    onRetry,
+  }: {
+    message: string;
+    onRetry: () => void;
+  }) => (
+    <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
+      <div className="text-8xl mb-6">⚠️</div>
+      <h3 className="text-2xl font-bold text-gray-900 mb-4">
+        Something went wrong
+      </h3>
+      <p className="text-gray-500 text-lg mb-6">{message}</p>
+      <button
+        onClick={onRetry}
+        className="inline-flex items-center space-x-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+      >
+        <span>Try Again</span>
+      </button>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -198,6 +334,9 @@ const Homepage: React.FC = () => {
                   alt={userName}
                   className="h-20 w-20 rounded-full mx-auto mb-4 border-4 border-indigo-100"
                 />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {userName}
+                </h3>
                 <p className="text-sm text-gray-500">Idea Contributor</p>
                 <div className="mt-3 px-3 py-1 bg-indigo-50 rounded-full">
                   <span className="text-xs text-indigo-600 font-medium">
@@ -221,9 +360,17 @@ const Homepage: React.FC = () => {
                   <FaUser className="h-4 w-4 text-indigo-500" />
                   <span className="font-medium">My Profile</span>
                 </button>
-                <button className="w-full flex items-center space-x-3 px-4 py-3 text-left text-gray-700 hover:bg-indigo-50 rounded-lg transition-colors">
+                <button
+                  onClick={() => navigate("/savedpost")}
+                  className="w-full flex items-center space-x-3 px-4 py-3 text-left text-gray-700 hover:bg-indigo-50 rounded-lg transition-colors"
+                >
                   <FaBookmark className="h-4 w-4 text-indigo-500" />
                   <span className="font-medium">Saved Posts</span>
+                  {savedPosts.size > 0 && (
+                    <span className="ml-auto bg-indigo-100 text-indigo-600 text-xs font-medium px-2 py-1 rounded-full">
+                      {savedPosts.size}
+                    </span>
+                  )}
                 </button>
               </div>
 
@@ -256,8 +403,8 @@ const Homepage: React.FC = () => {
                     <span>{posts.length} Ideas Shared</span>
                   </div>
                   <div className="flex items-center space-x-1 bg-white/20 px-3 py-1 rounded-full">
-                    <span>🚀</span>
-                    <span>Innovation Hub</span>
+                    <span>🔖</span>
+                    <span>{savedPosts.size} Saved Posts</span>
                   </div>
                   <div className="flex items-center space-x-1 bg-white/20 px-3 py-1 rounded-full">
                     <span>🌟</span>
@@ -275,6 +422,8 @@ const Homepage: React.FC = () => {
                 Array.from({ length: 3 }).map((_, index) => (
                   <PostSkeleton key={index} />
                 ))
+              ) : error ? (
+                <ErrorDisplay message={error} onRetry={fetchIdeas} />
               ) : posts.length === 0 ? (
                 <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
                   <div className="text-8xl mb-6">💡</div>
@@ -332,12 +481,11 @@ const Homepage: React.FC = () => {
                     </div>
 
                     {/* Post Content */}
-                    <div className="px-6 pb-4">
+                    <div className="px-6 pb-4" onClick={() => openPostModal(post)}>
                       <h2 className="text-xl font-bold text-gray-900 mb-3">
                         {post.title}
                       </h2>
 
-                      {/* Compact Description Display */}
                       <div className="relative">
                         <p className="text-gray-700 leading-relaxed mb-3">
                           {getTwoLineDescription(post.description)}
@@ -346,10 +494,7 @@ const Homepage: React.FC = () => {
                         {needsTruncation(post.description) && (
                           <div className="relative">
                             <div className="absolute -top-8 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
-                            <button
-                              onClick={() => openPostModal(post)}
-                              className="flex items-center space-x-2 px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium"
-                            >
+                            <button className="flex items-center space-x-2 px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium">
                               <span>View More</span>
                               <FaChevronDown className="h-3 w-3" />
                             </button>
@@ -376,7 +521,7 @@ const Homepage: React.FC = () => {
                               <FaRegHeart className="h-4 w-4" />
                             )}
                             <span className="font-medium text-sm">
-                              {post.like ?? 1}
+                              {post.like ?? 0}
                             </span>
                           </button>
 
@@ -403,6 +548,11 @@ const Homepage: React.FC = () => {
                               ? "text-yellow-600 bg-yellow-50 hover:bg-yellow-100"
                               : "text-gray-600 hover:text-yellow-600 hover:bg-yellow-50"
                           }`}
+                          title={
+                            savedPosts.has(post._id)
+                              ? "Remove from saved posts"
+                              : "Save post"
+                          }
                         >
                           {savedPosts.has(post._id) ? (
                             <FaBookmark className="h-4 w-4" />
@@ -420,23 +570,19 @@ const Homepage: React.FC = () => {
         </div>
       </div>
 
-      {/* Enhanced Post Detail Modal with Beautiful Background */}
+      {/* Enhanced Post Detail Modal */}
       {showModal && selectedPost && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Enhanced Background Overlay */}
           <div
             className="absolute inset-0 bg-gradient-to-br backdrop-blur-md"
             onClick={closePostModal}
           >
-            {/* Animated Background Elements */}
             <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-indigo-300/20 rounded-full blur-3xl animate-pulse"></div>
             <div className="absolute top-3/4 right-1/4 w-96 h-96 bg-purple-300/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
             <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-pink-300/20 rounded-full blur-3xl animate-pulse delay-2000"></div>
           </div>
 
-          {/* Modal Content */}
           <div className="relative bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl ring-1 ring-gray-200/50 backdrop-blur-sm">
-            {/* Modal Header with Gradient */}
             <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-200/50">
               <div className="flex items-center justify-between p-6">
                 <div className="flex items-center space-x-3">
@@ -473,7 +619,6 @@ const Homepage: React.FC = () => {
               </div>
             </div>
 
-            {/* Modal Content with Enhanced Styling */}
             <div className="overflow-y-auto max-h-[calc(90vh-140px)] bg-gradient-to-br from-white via-gray-50/30 to-indigo-50/20">
               <div className="p-8">
                 <h1 className="text-3xl font-bold text-gray-900 mb-6 leading-tight">
@@ -486,7 +631,6 @@ const Homepage: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Enhanced Image Display in Modal */}
                 {selectedPost.image && (
                   <div className="mb-8">
                     <div className="relative rounded-2xl overflow-hidden shadow-xl border border-gray-200/50 bg-white/50 backdrop-blur-sm p-2">
@@ -503,7 +647,6 @@ const Homepage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Enhanced Modal Actions */}
                 <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-6">

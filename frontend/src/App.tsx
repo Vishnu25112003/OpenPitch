@@ -12,6 +12,7 @@ import Sidebar from "./components/admin/components/Sidebar";
 import Posts from "./components/admin/pages/Posts";
 import Users from "./components/admin/pages/Users";
 import AdminNavbar from "./components/admin/components/AdminNavbar";
+import SavedPosts from "./components/user/pages/SavedPosts";
 
 const AdminPage = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -79,6 +80,16 @@ const App: React.FC = () => {
             <>
               <Navbar />
               <TrendingPost />
+              <Verities />
+            </>
+          }
+        />
+        <Route
+          path="/savedpost"
+          element={
+            <>
+              <Navbar />
+              <SavedPosts />
               <Verities />
             </>
           }
