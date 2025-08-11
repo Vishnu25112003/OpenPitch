@@ -10,7 +10,6 @@ import {
   FaPlus,
   FaFire,
   FaUser,
-  FaChevronDown,
   FaTimes,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +25,7 @@ interface Idea {
   createdAt?: string;
   comments?: number;
   savedBy?: string[];
+  likedBy?: string[]; // Add this to track who liked the post
 }
 
 const Homepage: React.FC = () => {
@@ -89,17 +89,26 @@ const Homepage: React.FC = () => {
       const data = await response.json();
       setPosts(data);
 
-      // Initialize saved posts from backend data
+      // Initialize liked and saved posts from backend data
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
         const user = JSON.parse(storedUser);
         const userSavedPosts = new Set<string>();
+        const userLikedPosts = new Set<string>();
+
         data.forEach((post: Idea) => {
+          // Initialize saved posts
           if (post.savedBy && post.savedBy.includes(user._id)) {
             userSavedPosts.add(post._id);
           }
+          // Initialize liked posts if likedBy exists
+          if (post.likedBy && post.likedBy.includes(user._id)) {
+            userLikedPosts.add(post._id);
+          }
         });
+
         setSavedPosts(userSavedPosts);
+        setLikedPosts(userLikedPosts);
       }
     } catch (error) {
       console.error("Error fetching ideas:", error);
@@ -121,6 +130,44 @@ const Homepage: React.FC = () => {
       return;
     }
 
+    // Store the previous state for potential rollback
+    const wasLiked = likedPosts.has(id);
+    const currentPost = posts.find((post) => post._id === id);
+    const previousLikeCount = currentPost?.like ?? 0;
+
+    // Optimistic update for better UX
+    setLikedPosts((prev) => {
+      const newSet = new Set(prev);
+      if (wasLiked) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+
+    // Update posts array immediately
+    const updatePosts = (prevPosts: Idea[]) =>
+      prevPosts.map((post) =>
+        post._id === id
+          ? { ...post, like: (post.like || 0) + (wasLiked ? -1 : 1) }
+          : post
+      );
+
+    setPosts(updatePosts);
+
+    // **KEY FIX: Update selectedPost if it's the same post being liked**
+    if (selectedPost && selectedPost._id === id) {
+      setSelectedPost((prev) =>
+        prev
+          ? {
+              ...prev,
+              like: (prev.like || 0) + (wasLiked ? -1 : 1),
+            }
+          : null
+      );
+    }
+
     try {
       const response = await fetch(
         `http://localhost:5000/api/review/like/${id}`,
@@ -134,6 +181,29 @@ const Homepage: React.FC = () => {
       );
 
       if (!response.ok) {
+        // Revert optimistic updates on error
+        setLikedPosts((prev) => {
+          const newSet = new Set(prev);
+          if (wasLiked) {
+            newSet.add(id);
+          } else {
+            newSet.delete(id);
+          }
+          return newSet;
+        });
+
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post._id === id ? { ...post, like: previousLikeCount } : post
+          )
+        );
+
+        if (selectedPost && selectedPost._id === id) {
+          setSelectedPost((prev) =>
+            prev ? { ...prev, like: previousLikeCount } : null
+          );
+        }
+
         const errorData = await response.json();
         throw new Error(
           errorData.message || `HTTP error! status: ${response.status}`
@@ -141,20 +211,18 @@ const Homepage: React.FC = () => {
       }
 
       const data = await response.json();
+
+      // Update with actual server response
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
           post._id === id ? { ...post, like: data.like } : post
         )
       );
-      setLikedPosts((prev) => {
-        const newSet = new Set(prev);
-        if (newSet.has(id)) {
-          newSet.delete(id);
-        } else {
-          newSet.add(id);
-        }
-        return newSet;
-      });
+
+      // **KEY FIX: Update selectedPost with server response**
+      if (selectedPost && selectedPost._id === id) {
+        setSelectedPost((prev) => (prev ? { ...prev, like: data.like } : null));
+      }
     } catch (error) {
       console.error("Error liking post:", error);
       alert(
@@ -213,7 +281,6 @@ const Homepage: React.FC = () => {
           alert("Post removed from saved posts!");
         } else {
           newSet.add(id);
-          // alert("Post saved successfully!");
         }
         return newSet;
       });
@@ -225,6 +292,13 @@ const Homepage: React.FC = () => {
             post._id === id ? { ...post, savedBy: data.idea.savedBy } : post
           )
         );
+
+        // **Update selectedPost if it's the same post being saved**
+        if (selectedPost && selectedPost._id === id) {
+          setSelectedPost((prev) =>
+            prev ? { ...prev, savedBy: data.idea.savedBy } : null
+          );
+        }
       }
     } catch (error) {
       console.error("Error saving post:", error);
@@ -334,9 +408,6 @@ const Homepage: React.FC = () => {
                   alt={userName}
                   className="h-20 w-20 rounded-full mx-auto mb-4 border-4 border-indigo-100"
                 />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {userName}
-                </h3>
                 <p className="text-sm text-gray-500">Idea Contributor</p>
                 <div className="mt-3 px-3 py-1 bg-indigo-50 rounded-full">
                   <span className="text-xs text-indigo-600 font-medium">
@@ -391,9 +462,6 @@ const Homepage: React.FC = () => {
             {/* Welcome Banner */}
             <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl text-white p-8 mb-8 relative overflow-hidden">
               <div className="relative z-10">
-                <h1 className="text-3xl font-bold mb-2">
-                  Welcome back, {userName}! 👋
-                </h1>
                 <p className="text-indigo-100 text-lg mb-4">
                   Ready to discover amazing ideas from our innovative community?
                 </p>
@@ -481,52 +549,74 @@ const Homepage: React.FC = () => {
                     </div>
 
                     {/* Post Content */}
-                    <div className="px-6 pb-4" onClick={() => openPostModal(post)}>
-                      <h2 className="text-xl font-bold text-gray-900 mb-3">
-                        {post.title}
-                      </h2>
+                    <div
+                      className="px-6 pb-4 flex flex-col md:flex-row cursor-pointer"
+                      onClick={() => openPostModal(post)}
+                    >
+                      <div className="flex-1 md:pl-6">
+                        <h2 className="text-xl font-bold text-gray-900 mb-3">
+                          {post.title}
+                        </h2>
 
-                      <div className="relative">
-                        <p className="text-gray-700 leading-relaxed mb-3">
-                          {getTwoLineDescription(post.description)}
-                        </p>
+                        <div className="relative">
+                          <p className="text-gray-700 leading-relaxed mb-3">
+                            {getTwoLineDescription(post.description)}
+                          </p>
 
-                        {needsTruncation(post.description) && (
-                          <div className="relative">
-                            <div className="absolute -top-8 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
-                            <button className="flex items-center space-x-2 px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium">
-                              <span>View More</span>
-                              <FaChevronDown className="h-3 w-3" />
-                            </button>
-                          </div>
+                          {needsTruncation(post.description) && (
+                            <div className="relative">
+                              <div className="absolute -top-8 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+                              <span className="font-medium text-sm text-indigo-600 cursor-pointer">
+                                View More
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="w-full md:w-1/3 mb-4 md:mb-0">
+                        {post.image && (
+                          <img
+                            src={`http://localhost:5000/${post.image}`}
+                            className="w-full rounded-lg"
+                            alt={post.title}
+                          />
                         )}
                       </div>
                     </div>
 
-                    {/* Post Actions */}
+                    {/* Post Actions - Enhanced Like Button */}
                     <div className="px-6 py-4 border-t border-gray-100">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-6">
                           <button
-                            onClick={() => handleLike(post._id)}
-                            className={`flex items-center space-x-2 px-3 py-2 rounded-full transition-all ${
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleLike(post._id);
+                            }}
+                            className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105 ${
                               likedPosts.has(post._id)
-                                ? "text-red-600 bg-red-50 hover:bg-red-100"
-                                : "text-gray-600 hover:text-red-600 hover:bg-red-50"
+                                ? "bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg shadow-red-200 border-2 border-red-400"
+                                : "text-gray-600 hover:text-red-600 hover:bg-red-50 border-2 border-gray-200 hover:border-red-200 bg-white"
                             }`}
                           >
                             {likedPosts.has(post._id) ? (
-                              <FaHeart className="h-4 w-4" />
+                              <FaHeart className="h-4 w-4 animate-pulse" />
                             ) : (
                               <FaRegHeart className="h-4 w-4" />
                             )}
-                            <span className="font-medium text-sm">
+                            <span className="font-semibold text-sm">
                               {post.like ?? 0}
+                            </span>
+                            <span className="text-xs font-medium">
+                              {likedPosts.has(post._id) ? "Liked" : "Like"}
                             </span>
                           </button>
 
                           <button
-                            onClick={() => handleComment(post._id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleComment(post._id);
+                            }}
                             className="flex items-center space-x-2 px-3 py-2 rounded-full text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all"
                           >
                             <FaComment className="h-4 w-4" />
@@ -535,14 +625,20 @@ const Homepage: React.FC = () => {
                             </span>
                           </button>
 
-                          <button className="flex items-center space-x-2 px-3 py-2 rounded-full text-gray-600 hover:text-green-600 hover:bg-green-50 transition-all">
+                          <button
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center space-x-2 px-3 py-2 rounded-full text-gray-600 hover:text-green-600 hover:bg-green-50 transition-all"
+                          >
                             <FaShare className="h-4 w-4" />
                             <span className="font-medium text-sm">Share</span>
                           </button>
                         </div>
 
                         <button
-                          onClick={() => handleSave(post._id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSave(post._id);
+                          }}
                           className={`p-2 rounded-full transition-all ${
                             savedPosts.has(post._id)
                               ? "text-yellow-600 bg-yellow-50 hover:bg-yellow-100"
@@ -647,24 +743,28 @@ const Homepage: React.FC = () => {
                   </div>
                 )}
 
+                {/* Enhanced Modal Like Button - Now Properly Updates */}
                 <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-6">
                       <button
                         onClick={() => handleLike(selectedPost._id)}
-                        className={`flex items-center space-x-2 px-4 py-3 rounded-full transition-all shadow-sm ${
+                        className={`flex items-center space-x-3 px-6 py-3 rounded-full transition-all duration-300 transform hover:scale-105 ${
                           likedPosts.has(selectedPost._id)
-                            ? "text-red-600 bg-red-50 hover:bg-red-100 shadow-red-100"
-                            : "text-gray-600 hover:text-red-600 hover:bg-red-50 bg-white hover:shadow-red-100"
+                            ? "bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-xl shadow-red-200 border-2 border-red-400"
+                            : "text-gray-600 hover:text-red-600 hover:bg-red-50 bg-white border-2 border-gray-200 hover:border-red-200 shadow-sm hover:shadow-red-100"
                         }`}
                       >
                         {likedPosts.has(selectedPost._id) ? (
-                          <FaHeart className="h-5 w-5" />
+                          <FaHeart className="h-5 w-5 animate-pulse" />
                         ) : (
                           <FaRegHeart className="h-5 w-5" />
                         )}
-                        <span className="font-medium text-lg">
+                        <span className="font-bold text-lg">
                           {selectedPost.like ?? 0}
+                        </span>
+                        <span className="text-sm font-medium">
+                          {likedPosts.has(selectedPost._id) ? "Liked" : "Like"}
                         </span>
                       </button>
 

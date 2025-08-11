@@ -602,3 +602,4 @@ const SavedPosts: React.FC = () => {
 };
 
 export default SavedPosts;
+

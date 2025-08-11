@@ -54,7 +54,6 @@ export const addComment = async (req, res) => {
     if (!commentText) {
       return res.status(400).json({ message: "Comment cannot be empty" });
     }
-
     const comment = new Comment({
       postId,
       userId,
@@ -62,13 +61,16 @@ export const addComment = async (req, res) => {
     });
 
     await comment.save();
+    await IdeaPost.findByIdAndUpdate(postId, {
+      $inc: { comments: 1 },
+    });
 
     res.status(201).json({ message: "Comment added", comment });
   } catch (error) {
+    console.error("Error adding comment:", error);
     res.status(500).json({ message: "Error adding comment", error });
   }
 };
-
 export const getCommentsForPost = async (req, res) => {
   try {
     const { postId } = req.params;
