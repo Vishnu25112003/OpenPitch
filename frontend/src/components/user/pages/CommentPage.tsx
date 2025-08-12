@@ -8,6 +8,7 @@ interface Comment {
   commentText: string;
   createdAt: string;
   userId: {
+    _id: string; // Added user ID to compare with current user
     name: string;
   };
 }
@@ -18,6 +19,22 @@ const CommentPage: React.FC = () => {
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState<Comment[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Function to get current user ID from token
+  const getCurrentUserId = () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        // Decode JWT token to get user ID
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setCurrentUserId(payload.userId || payload.id);
+      } catch (error) {
+        console.error("Error decoding token:", error);
+        setCurrentUserId(null);
+      }
+    }
+  };
 
   const fetchComments = async () => {
     try {
@@ -60,6 +77,7 @@ const CommentPage: React.FC = () => {
   };
 
   useEffect(() => {
+    getCurrentUserId(); // Get current user ID when component mounts
     fetchComments();
   }, []);
 
@@ -194,13 +212,16 @@ const CommentPage: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDeleteComment(comment._id)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors ml-4"
-                    title="Delete comment"
-                  >
-                    <AiOutlineDelete className="h-4 w-4" />
-                  </button>
+                  {/* Only show delete button if current user is the comment author */}
+                  {currentUserId && currentUserId === comment.userId._id && (
+                    <button
+                      onClick={() => handleDeleteComment(comment._id)}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors ml-4"
+                      title="Delete comment"
+                    >
+                      <AiOutlineDelete className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))
@@ -210,5 +231,6 @@ const CommentPage: React.FC = () => {
     </div>
   );
 };
+
 
 export default CommentPage;

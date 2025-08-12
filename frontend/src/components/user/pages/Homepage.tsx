@@ -24,8 +24,9 @@ interface Idea {
   userId: { _id: string; name: string };
   createdAt?: string;
   comments?: number;
+  commentCount?: number; // Added for explicit comment count
   savedBy?: string[];
-  likedBy?: string[]; // Add this to track who liked the post
+  likedBy?: string[];
 }
 
 const Homepage: React.FC = () => {
@@ -75,6 +76,7 @@ const Homepage: React.FC = () => {
     }
   }, [navigate]);
 
+  // Enhanced fetchIdeas function to get comment counts
   const fetchIdeas = async () => {
     try {
       setLoading(true);
@@ -87,7 +89,40 @@ const Homepage: React.FC = () => {
       }
 
       const data = await response.json();
-      setPosts(data);
+
+      // Fetch comment count for each post
+      const postsWithCommentCount = await Promise.all(
+        data.map(async (post: Idea) => {
+          try {
+            const commentResponse = await fetch(
+              `http://localhost:5000/api/review/${post._id}`
+            );
+            if (commentResponse.ok) {
+              const comments = await commentResponse.json();
+              return {
+                ...post,
+                commentCount: Array.isArray(comments) ? comments.length : 0,
+              };
+            } else {
+              return {
+                ...post,
+                commentCount: post.comments || 0,
+              };
+            }
+          } catch (error) {
+            console.error(
+              `Error fetching comments for post ${post._id}:`,
+              error
+            );
+            return {
+              ...post,
+              commentCount: post.comments || 0,
+            };
+          }
+        })
+      );
+
+      setPosts(postsWithCommentCount);
 
       // Initialize liked and saved posts from backend data
       const storedUser = localStorage.getItem("user");
@@ -96,7 +131,7 @@ const Homepage: React.FC = () => {
         const userSavedPosts = new Set<string>();
         const userLikedPosts = new Set<string>();
 
-        data.forEach((post: Idea) => {
+        postsWithCommentCount.forEach((post: Idea) => {
           // Initialize saved posts
           if (post.savedBy && post.savedBy.includes(user._id)) {
             userSavedPosts.add(post._id);
@@ -115,6 +150,39 @@ const Homepage: React.FC = () => {
       setError("Failed to load posts. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Function to refresh comment count for a specific post
+  const refreshCommentCount = async (postId: string) => {
+    try {
+      const commentResponse = await fetch(
+        `http://localhost:5000/api/review/${postId}`
+      );
+      if (commentResponse.ok) {
+        const comments = await commentResponse.json();
+        const commentCount = Array.isArray(comments) ? comments.length : 0;
+
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post._id === postId
+              ? { ...post, commentCount, comments: commentCount }
+              : post
+          )
+        );
+
+        // Update selectedPost if it's the same post
+        if (selectedPost && selectedPost._id === postId) {
+          setSelectedPost((prev) =>
+            prev ? { ...prev, commentCount, comments: commentCount } : null
+          );
+        }
+      }
+    } catch (error) {
+      console.error(
+        `Error refreshing comment count for post ${postId}:`,
+        error
+      );
     }
   };
 
@@ -310,10 +378,13 @@ const Homepage: React.FC = () => {
     }
   };
 
-  const openPostModal = (post: Idea) => {
+  const openPostModal = async (post: Idea) => {
     setSelectedPost(post);
     setShowModal(true);
     document.body.style.overflow = "hidden";
+
+    // Refresh comment count when opening modal
+    await refreshCommentCount(post._id);
   };
 
   const closePostModal = () => {
@@ -321,6 +392,21 @@ const Homepage: React.FC = () => {
     setShowModal(false);
     document.body.style.overflow = "unset";
   };
+
+  // Add effect to refresh comment counts when returning from comment page
+  useEffect(() => {
+    const handleFocus = () => {
+      // Refresh comment counts when user returns to the page
+      if (!loading) {
+        posts.forEach((post) => {
+          refreshCommentCount(post._id);
+        });
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [posts, loading]);
 
   const formatTimeAgo = (dateString: string) => {
     if (!dateString) return "Just now";
@@ -621,7 +707,7 @@ const Homepage: React.FC = () => {
                           >
                             <FaComment className="h-4 w-4" />
                             <span className="font-medium text-sm">
-                              {post.comments ?? 0}
+                              {post.commentCount ?? post.comments ?? 0}
                             </span>
                           </button>
 
@@ -721,12 +807,6 @@ const Homepage: React.FC = () => {
                   {selectedPost.title}
                 </h1>
 
-                <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/50 mb-6">
-                  <p className="text-gray-700 leading-relaxed text-lg whitespace-pre-wrap">
-                    {selectedPost.description}
-                  </p>
-                </div>
-
                 {selectedPost.image && (
                   <div className="mb-8">
                     <div className="relative rounded-2xl overflow-hidden shadow-xl border border-gray-200/50 bg-white/50 backdrop-blur-sm p-2">
@@ -742,6 +822,12 @@ const Homepage: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/50 mb-6">
+                  <p className="text-gray-700 leading-relaxed text-lg whitespace-pre-wrap">
+                    {selectedPost.description}
+                  </p>
+                </div>
 
                 {/* Enhanced Modal Like Button - Now Properly Updates */}
                 <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/50">
@@ -777,7 +863,9 @@ const Homepage: React.FC = () => {
                       >
                         <FaComment className="h-5 w-5" />
                         <span className="font-medium text-lg">
-                          {selectedPost.comments ?? 0}
+                          {selectedPost.commentCount ??
+                            selectedPost.comments ??
+                            0}
                         </span>
                       </button>
 
