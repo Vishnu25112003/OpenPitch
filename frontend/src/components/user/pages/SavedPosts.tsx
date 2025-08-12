@@ -21,14 +21,12 @@ interface SavedPost {
   userId: { _id: string; name: string };
   createdAt?: string;
   comments?: number;
-  savedBy?: string[];
+  likedBy?: string[];
 }
 
 const SavedPosts: React.FC = () => {
   const navigate = useNavigate();
-  const [, setUserName] = useState("");
-  const [, setUserAvatar] = useState("");
-  const [currentUserId, setCurrentUserId] = useState("");
+  const [, setCurrentUserId] = useState("");
   const [savedPosts, setSavedPosts] = useState<SavedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +40,6 @@ const SavedPosts: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Check authentication
         const storedUser = localStorage.getItem("user");
         const token = localStorage.getItem("token");
 
@@ -52,17 +49,8 @@ const SavedPosts: React.FC = () => {
         }
 
         const user = JSON.parse(storedUser);
-        setUserName(user.name);
         setCurrentUserId(user._id);
-        setUserAvatar(
-          user.avatar ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(
-              user.name
-            )}&background=6366f1&color=fff`
-        );
-
-        // Fetch saved posts
-        await fetchSavedPosts(user._id);
+        await fetchSavedPosts();
       } catch (error) {
         console.error("Error in initialization:", error);
         setError("Failed to initialize. Please try again.");
@@ -73,22 +61,42 @@ const SavedPosts: React.FC = () => {
     checkAuthAndFetchSavedPosts();
   }, [navigate]);
 
-  const fetchSavedPosts = async (userId: string) => {
+  const fetchSavedPosts = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/idea/ideas");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const response = await fetch("http://localhost:5000/api/review/saved", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const allPosts = await response.json();
+      const posts = await response.json();
+      setSavedPosts(posts);
 
-      // Filter posts that are saved by current user
-      const userSavedPosts = allPosts.filter(
-        (post: SavedPost) => post.savedBy && post.savedBy.includes(userId)
-      );
+      // Initialize liked posts
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        const userLikedPosts = new Set<string>();
 
-      setSavedPosts(userSavedPosts);
+        posts.forEach((post: SavedPost) => {
+          if (post.likedBy && post.likedBy.includes(user._id)) {
+            userLikedPosts.add(post._id);
+          }
+        });
+
+        setLikedPosts(userLikedPosts);
+      }
     } catch (error) {
       console.error("Error fetching saved posts:", error);
       setError("Failed to load saved posts. Please try again.");
@@ -170,22 +178,14 @@ const SavedPosts: React.FC = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ savePost: false }),
         }
       );
 
       if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = `HTTP error! status: ${response.status}`;
-
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorMessage;
-        } catch {
-          errorMessage = errorText || errorMessage;
-        }
-
-        throw new Error(errorMessage);
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       // Remove from saved posts list
@@ -254,7 +254,6 @@ const SavedPosts: React.FC = () => {
     </div>
   );
 
-  // Error UI component
   const ErrorDisplay = ({
     message,
     onRetry,
@@ -325,10 +324,7 @@ const SavedPosts: React.FC = () => {
               <PostSkeleton key={index} />
             ))
           ) : error ? (
-            <ErrorDisplay
-              message={error}
-              onRetry={() => currentUserId && fetchSavedPosts(currentUserId)}
-            />
+            <ErrorDisplay message={error} onRetry={fetchSavedPosts} />
           ) : savedPosts.length === 0 ? (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
               <FaBookmark className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -602,4 +598,3 @@ const SavedPosts: React.FC = () => {
 };
 
 export default SavedPosts;
-

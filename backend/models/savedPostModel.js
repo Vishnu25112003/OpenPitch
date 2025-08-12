@@ -1,4 +1,3 @@
-// models/savedPostModel.js
 import mongoose from "mongoose";
 
 const savedPostSchema = new mongoose.Schema(
@@ -16,6 +15,9 @@ const savedPostSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Prevent duplicate saves
+savedPostSchema.index({ postId: 1, userId: 1 }, { unique: true });
 
 const SavedPost = mongoose.model("SavedPost", savedPostSchema);
 export default SavedPost;

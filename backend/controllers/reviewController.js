@@ -14,7 +14,6 @@ export const likeIdea = async (req, res) => {
     }
 
     const idea = await IdeaPost.findById(ideaId);
-
     if (!idea) {
       return res.status(404).json({ message: "Idea not found" });
     }
@@ -30,7 +29,6 @@ export const likeIdea = async (req, res) => {
     }
 
     idea.like = idea.likedBy.length;
-
     await idea.save();
 
     return res.status(200).json({
@@ -54,6 +52,7 @@ export const addComment = async (req, res) => {
     if (!commentText) {
       return res.status(400).json({ message: "Comment cannot be empty" });
     }
+
     const comment = new Comment({
       postId,
       userId,
@@ -61,9 +60,7 @@ export const addComment = async (req, res) => {
     });
 
     await comment.save();
-    await IdeaPost.findByIdAndUpdate(postId, {
-      $inc: { comments: 1 },
-    });
+    await IdeaPost.findByIdAndUpdate(postId, { $inc: { comments: 1 } });
 
     res.status(201).json({ message: "Comment added", comment });
   } catch (error) {
@@ -90,9 +87,11 @@ export const deleteComment = async (req, res) => {
   try {
     const { id } = req.params;
     const comment = await Comment.findByIdAndDelete(id);
+
     if (!comment) {
       return res.status(404).json({ message: "Comment not found" });
     }
+
     res.status(200).json({ message: "Comment deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting comment", error });
@@ -103,18 +102,32 @@ export const savePost = async (req, res) => {
   try {
     const { postId } = req.params;
     const userId = req.user.userId;
+
+    const post = await IdeaPost.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
     const existingSave = await SavedPost.findOne({ postId, userId });
 
     if (existingSave) {
-      await SavedPost.findByIdAndDelete(existingSave._id);
-      return res.status(200).json({ message: "Post unsaved successfully" });
+      await SavedPost.deleteOne({ postId, userId });
+      return res.status(200).json({
+        message: "Post removed from saved posts",
+        isSaved: false,
+      });
     } else {
-      const newSave = new SavedPost({ postId, userId });
-      await newSave.save();
-      return res.status(200).json({ message: "Post saved successfully" });
+      await SavedPost.create({ postId, userId });
+      return res.status(200).json({
+        message: "Post saved successfully",
+        isSaved: true,
+      });
     }
   } catch (error) {
-    res.status(500).json({ message: "Error saving post", error });
+    console.error("Error saving post:", error);
+    res
+      .status(500)
+      .json({ message: "Error saving post", error: error.message });
   }
 };
 
@@ -123,11 +136,24 @@ export const getSavedPosts = async (req, res) => {
     const userId = req.user.userId;
 
     const savedPosts = await SavedPost.find({ userId })
-      .populate("postId")
+      .populate({
+        path: "postId",
+        populate: {
+          path: "userId",
+          select: "name",
+        },
+      })
       .sort({ createdAt: -1 });
 
-    res.status(200).json(savedPosts);
+    const validSavedPosts = savedPosts
+      .filter((saved) => saved.postId !== null)
+      .map((saved) => saved.postId);
+
+    res.status(200).json(validSavedPosts);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching saved posts", error });
+    console.error("Error fetching saved posts:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching saved posts", error: error.message });
   }
 };

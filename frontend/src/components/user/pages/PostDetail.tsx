@@ -36,7 +36,7 @@ const PostDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState("");
+  const [, setCurrentUserId] = useState("");
 
   useEffect(() => {
     const checkAuth = () => {
