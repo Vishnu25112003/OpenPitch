@@ -71,6 +71,7 @@ export const addComment = async (req, res) => {
     res.status(500).json({ message: "Error adding comment", error });
   }
 };
+
 export const getCommentsForPost = async (req, res) => {
   try {
     const { postId } = req.params;

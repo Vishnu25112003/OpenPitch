@@ -13,6 +13,7 @@ import Posts from "./components/admin/pages/Posts";
 import Users from "./components/admin/pages/Users";
 import AdminNavbar from "./components/admin/components/AdminNavbar";
 import SavedPosts from "./components/user/pages/SavedPosts";
+import PostDetail from "./components/user/pages/PostDetail";
 
 const AdminPage = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -90,6 +91,16 @@ const App: React.FC = () => {
             <>
               <Navbar />
               <SavedPosts />
+              <Verities />
+            </>
+          }
+        />
+        <Route
+          path="/post/:id"
+          element={
+            <>
+              <Navbar />
+              <PostDetail />
               <Verities />
             </>
           }

@@ -10,7 +10,6 @@ import {
   FaPlus,
   FaFire,
   FaUser,
-  FaTimes,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
@@ -24,7 +23,7 @@ interface Idea {
   userId: { _id: string; name: string };
   createdAt?: string;
   comments?: number;
-  commentCount?: number; // Added for explicit comment count
+  commentCount?: number;
   savedBy?: string[];
   likedBy?: string[];
 }
@@ -38,8 +37,6 @@ const Homepage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set());
-  const [selectedPost, setSelectedPost] = useState<Idea | null>(null);
-  const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Check authentication on component mount
@@ -170,13 +167,6 @@ const Homepage: React.FC = () => {
               : post
           )
         );
-
-        // Update selectedPost if it's the same post
-        if (selectedPost && selectedPost._id === postId) {
-          setSelectedPost((prev) =>
-            prev ? { ...prev, commentCount, comments: commentCount } : null
-          );
-        }
       }
     } catch (error) {
       console.error(
@@ -188,6 +178,67 @@ const Homepage: React.FC = () => {
 
   const handleComment = (id: string) => {
     navigate(`/comment/${id}`);
+  };
+
+  const handleShare = async (post: Idea) => {
+    const postUrl = `${window.location.origin}/post/${post._id}`;
+    const shareData = {
+      title: post.title,
+      text: post.description.substring(0, 100) + "...",
+      url: postUrl,
+    };
+
+    try {
+      // Check if Web Share API is supported
+      if (
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare(shareData)
+      ) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback to copying to clipboard
+        await navigator.clipboard.writeText(
+          `Check out this amazing idea: "${post.title}" - ${postUrl}`
+        );
+
+        // Show success message
+        const existingToast = document.querySelector(".share-toast");
+        if (existingToast) {
+          existingToast.remove();
+        }
+
+        const toast = document.createElement("div");
+        toast.className =
+          "share-toast fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300";
+        toast.textContent = "Post link copied to clipboard!";
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+          toast.style.opacity = "0";
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Error sharing:", error);
+
+      // Show error message
+      const existingToast = document.querySelector(".share-toast");
+      if (existingToast) {
+        existingToast.remove();
+      }
+
+      const toast = document.createElement("div");
+      toast.className =
+        "share-toast fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300";
+      toast.textContent = "Failed to share post";
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
   };
 
   const handleLike = async (id: string) => {
@@ -224,18 +275,6 @@ const Homepage: React.FC = () => {
 
     setPosts(updatePosts);
 
-    // **KEY FIX: Update selectedPost if it's the same post being liked**
-    if (selectedPost && selectedPost._id === id) {
-      setSelectedPost((prev) =>
-        prev
-          ? {
-              ...prev,
-              like: (prev.like || 0) + (wasLiked ? -1 : 1),
-            }
-          : null
-      );
-    }
-
     try {
       const response = await fetch(
         `http://localhost:5000/api/review/like/${id}`,
@@ -266,12 +305,6 @@ const Homepage: React.FC = () => {
           )
         );
 
-        if (selectedPost && selectedPost._id === id) {
-          setSelectedPost((prev) =>
-            prev ? { ...prev, like: previousLikeCount } : null
-          );
-        }
-
         const errorData = await response.json();
         throw new Error(
           errorData.message || `HTTP error! status: ${response.status}`
@@ -286,11 +319,6 @@ const Homepage: React.FC = () => {
           post._id === id ? { ...post, like: data.like } : post
         )
       );
-
-      // **KEY FIX: Update selectedPost with server response**
-      if (selectedPost && selectedPost._id === id) {
-        setSelectedPost((prev) => (prev ? { ...prev, like: data.like } : null));
-      }
     } catch (error) {
       console.error("Error liking post:", error);
       alert(
@@ -360,13 +388,6 @@ const Homepage: React.FC = () => {
             post._id === id ? { ...post, savedBy: data.idea.savedBy } : post
           )
         );
-
-        // **Update selectedPost if it's the same post being saved**
-        if (selectedPost && selectedPost._id === id) {
-          setSelectedPost((prev) =>
-            prev ? { ...prev, savedBy: data.idea.savedBy } : null
-          );
-        }
       }
     } catch (error) {
       console.error("Error saving post:", error);
@@ -378,19 +399,8 @@ const Homepage: React.FC = () => {
     }
   };
 
-  const openPostModal = async (post: Idea) => {
-    setSelectedPost(post);
-    setShowModal(true);
-    document.body.style.overflow = "hidden";
-
-    // Refresh comment count when opening modal
-    await refreshCommentCount(post._id);
-  };
-
-  const closePostModal = () => {
-    setSelectedPost(null);
-    setShowModal(false);
-    document.body.style.overflow = "unset";
+  const handlePostClick = (postId: string) => {
+    navigate(`/post/${postId}`);
   };
 
   // Add effect to refresh comment counts when returning from comment page
@@ -637,7 +647,7 @@ const Homepage: React.FC = () => {
                     {/* Post Content */}
                     <div
                       className="px-6 pb-4 flex flex-col md:flex-row cursor-pointer"
-                      onClick={() => openPostModal(post)}
+                      onClick={() => handlePostClick(post._id)}
                     >
                       <div className="flex-1 md:pl-6">
                         <h2 className="text-xl font-bold text-gray-900 mb-3">
@@ -653,7 +663,7 @@ const Homepage: React.FC = () => {
                             <div className="relative">
                               <div className="absolute -top-8 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
                               <span className="font-medium text-sm text-indigo-600 cursor-pointer">
-                                View More
+                                Read More
                               </span>
                             </div>
                           )}
@@ -670,7 +680,7 @@ const Homepage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Post Actions - Enhanced Like Button */}
+                    {/* Post Actions */}
                     <div className="px-6 py-4 border-t border-gray-100">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-6">
@@ -712,7 +722,10 @@ const Homepage: React.FC = () => {
                           </button>
 
                           <button
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShare(post);
+                            }}
                             className="flex items-center space-x-2 px-3 py-2 rounded-full text-gray-600 hover:text-green-600 hover:bg-green-50 transition-all"
                           >
                             <FaShare className="h-4 w-4" />
@@ -751,151 +764,6 @@ const Homepage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Enhanced Post Detail Modal */}
-      {showModal && selectedPost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-gradient-to-br backdrop-blur-md"
-            onClick={closePostModal}
-          >
-            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-indigo-300/20 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute top-3/4 right-1/4 w-96 h-96 bg-purple-300/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-            <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-pink-300/20 rounded-full blur-3xl animate-pulse delay-2000"></div>
-          </div>
-
-          <div className="relative bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl ring-1 ring-gray-200/50 backdrop-blur-sm">
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-200/50">
-              <div className="flex items-center justify-between p-6">
-                <div className="flex items-center space-x-3">
-                  <img
-                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                      selectedPost.userId.name || "User"
-                    )}&background=6366f1&color=fff`}
-                    alt={selectedPost.userId.name}
-                    className="h-12 w-12 rounded-full border-2 border-white shadow-md"
-                  />
-                  <div>
-                    <h4 className="font-semibold text-gray-900">
-                      {selectedPost.userId.name || "Unknown"}
-                    </h4>
-                    <div className="flex items-center space-x-2 text-sm text-gray-500">
-                      <span>{formatTimeAgo(selectedPost.createdAt || "")}</span>
-                      <span>•</span>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(
-                          selectedPost.category
-                        )}`}
-                      >
-                        {selectedPost.category}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={closePostModal}
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white/80 rounded-full transition-all duration-200 shadow-sm"
-                >
-                  <FaTimes className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="overflow-y-auto max-h-[calc(90vh-140px)] bg-gradient-to-br from-white via-gray-50/30 to-indigo-50/20">
-              <div className="p-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-6 leading-tight">
-                  {selectedPost.title}
-                </h1>
-
-                {selectedPost.image && (
-                  <div className="mb-8">
-                    <div className="relative rounded-2xl overflow-hidden shadow-xl border border-gray-200/50 bg-white/50 backdrop-blur-sm p-2">
-                      <img
-                        src={`http://localhost:5000/${selectedPost.image}`}
-                        alt={selectedPost.title}
-                        className="w-full max-h-96 object-cover rounded-xl"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = "none";
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/50 mb-6">
-                  <p className="text-gray-700 leading-relaxed text-lg whitespace-pre-wrap">
-                    {selectedPost.description}
-                  </p>
-                </div>
-
-                {/* Enhanced Modal Like Button - Now Properly Updates */}
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-6">
-                      <button
-                        onClick={() => handleLike(selectedPost._id)}
-                        className={`flex items-center space-x-3 px-6 py-3 rounded-full transition-all duration-300 transform hover:scale-105 ${
-                          likedPosts.has(selectedPost._id)
-                            ? "bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-xl shadow-red-200 border-2 border-red-400"
-                            : "text-gray-600 hover:text-red-600 hover:bg-red-50 bg-white border-2 border-gray-200 hover:border-red-200 shadow-sm hover:shadow-red-100"
-                        }`}
-                      >
-                        {likedPosts.has(selectedPost._id) ? (
-                          <FaHeart className="h-5 w-5 animate-pulse" />
-                        ) : (
-                          <FaRegHeart className="h-5 w-5" />
-                        )}
-                        <span className="font-bold text-lg">
-                          {selectedPost.like ?? 0}
-                        </span>
-                        <span className="text-sm font-medium">
-                          {likedPosts.has(selectedPost._id) ? "Liked" : "Like"}
-                        </span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          closePostModal();
-                          handleComment(selectedPost._id);
-                        }}
-                        className="flex items-center space-x-2 px-4 py-3 rounded-full text-gray-600 hover:text-blue-600 hover:bg-blue-50 bg-white transition-all shadow-sm hover:shadow-blue-100"
-                      >
-                        <FaComment className="h-5 w-5" />
-                        <span className="font-medium text-lg">
-                          {selectedPost.commentCount ??
-                            selectedPost.comments ??
-                            0}
-                        </span>
-                      </button>
-
-                      <button className="flex items-center space-x-2 px-4 py-3 rounded-full text-gray-600 hover:text-green-600 hover:bg-green-50 bg-white transition-all shadow-sm hover:shadow-green-100">
-                        <FaShare className="h-5 w-5" />
-                        <span className="font-medium text-lg">Share</span>
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={() => handleSave(selectedPost._id)}
-                      className={`p-3 rounded-full transition-all shadow-sm ${
-                        savedPosts.has(selectedPost._id)
-                          ? "text-yellow-600 bg-yellow-50 hover:bg-yellow-100 shadow-yellow-100"
-                          : "text-gray-600 hover:text-yellow-600 hover:bg-yellow-50 bg-white hover:shadow-yellow-100"
-                      }`}
-                    >
-                      {savedPosts.has(selectedPost._id) ? (
-                        <FaBookmark className="h-5 w-5" />
-                      ) : (
-                        <FaRegBookmark className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

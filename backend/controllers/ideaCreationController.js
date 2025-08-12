@@ -1,31 +1,23 @@
-
 import IdeaPost from "../models/ideaCreationModel.js";
 
 export const createIdea = async (req, res) => {
   try {
-    console.log("User in request:", req.user); 
-
     const userId = req.user?.userId;
-
-    if (!userId) {
-      return res.status(400).json({ message: "User ID not found in token" });
-    }
-
     const { title, description, category } = req.body;
 
     const newIdea = new IdeaPost({
-      userId, 
+      userId,
       title,
       description,
       category,
-      image: req.file ? req.file.filename : null, 
+      image: req.file ? req.file.filename : null,
     });
 
     await newIdea.save();
-
-    res.status(201).json({ message: "Idea posted successfully", idea: newIdea });
+    res
+      .status(201)
+      .json({ message: "Idea posted successfully", idea: newIdea });
   } catch (error) {
-    console.error("Idea post failed:", error);
     res.status(500).json({ message: "Server error while posting your idea" });
   }
 };
@@ -33,12 +25,26 @@ export const createIdea = async (req, res) => {
 export const getAllIdeas = async (req, res) => {
   try {
     const ideas = await IdeaPost.find()
-      .populate("userId", "name") 
+      .populate("userId", "name")
       .sort({ createdAt: -1 });
     res.status(200).json(ideas);
   } catch (error) {
-    console.error("Error getting ideas:", error); 
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const getIdeaById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const idea = await IdeaPost.findById(id).populate("userId", "name");
+
+    if (!idea) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    res.status(200).json(idea);
+  } catch (error) {
+    res.status(500).json({ message: "Server error while fetching post" });
   }
 };
 

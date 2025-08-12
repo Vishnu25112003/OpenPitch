@@ -27,6 +27,12 @@ const ideaPostSchema = new mongoose.Schema(
         ref: "Users",
       },
     ],
+    savedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Users",
+      },
+    ],
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Users",
